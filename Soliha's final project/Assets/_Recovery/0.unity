@@ -635,9 +635,9 @@ GameObject:
   - component: {fileID: 1979777737}
   - component: {fileID: 1979777736}
   - component: {fileID: 1979777735}
-  m_Layer: 3
+  m_Layer: 0
   m_Name: floor
-  m_TagString: Floor
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -751,7 +751,7 @@ GameObject:
   - component: {fileID: 2080995824}
   m_Layer: 0
   m_Name: player
-  m_TagString: Player
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -887,15 +887,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 2080995818}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a3a6aac8bb30f4a4eafabca87e3cecfc, type: 3}
+  m_Script: {fileID: 11500000, guid: 17029f3c257ad42499b4735d931f3683, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SimplePlayerController
-  moveSpeed: 5
-  jumpForce: 7
+  m_EditorClassIdentifier: Assembly-CSharp::JumpingPlayer
+  jumpForce: 5
+  groundCheckDistance: 1.1
   groundLayer:
     serializedVersion: 2
-    m_Bits: 8
-  groundCheckDistance: 1.1
+    m_Bits: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
