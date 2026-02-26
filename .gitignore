@@ -1,0 +1,47 @@
+# Unity generated folders
+**/Library/
+**/Temp/
+**/Obj/
+**/Build/
+**/Builds/
+**/Logs/
+**/UserSettings/
+
+# IDE files
+**/.vscode/
+**/.vs/
+**/.idea/
+
+# Generated project files
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Crashlytics
+crashlytics-build.properties
+
+# Unity3D generated meta data
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Sysinfo
+sysinfo.txt
+
+# Memory captures
+*.memsnap
+*.snap
