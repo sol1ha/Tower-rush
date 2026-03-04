@@ -25,11 +25,39 @@ public class PlayerController3D : MonoBehaviour
     private bool isDashing = false;
     private float dashCooldown = 1f;
     private float lastDashTime;
+    
+    [Header("Coyote Time")]
+    public float coyoteTime = 0.2f;
+    private float coyoteTimeCounter;
+
+    [Header("Input Action References")]
+    public InputActionReference moveAction;
+    public InputActionReference jumpAction;
+    public InputActionReference dashAction;
+
+    private void OnEnable()
+    {
+        if (moveAction != null) moveAction.action.Enable();
+        if (jumpAction != null) jumpAction.action.Enable();
+        if (dashAction != null) dashAction.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        if (moveAction != null) moveAction.action.Disable();
+        if (jumpAction != null) jumpAction.action.Disable();
+        if (dashAction != null) dashAction.action.Disable();
+    }
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
+
+        // Validation: Ensure actions are assigned
+        if (moveAction == null) Debug.LogError("Move Action is not assigned on " + gameObject.name + " in the Inspector!");
+        if (jumpAction == null) Debug.LogError("Jump Action is not assigned on " + gameObject.name + " in the Inspector!");
+        if (dashAction == null) Debug.LogError("Dash Action is not assigned on " + gameObject.name + " in the Inspector!");
 
         // Auto-assign groundCheck if it's null
         if (groundCheck == null)
@@ -44,8 +72,6 @@ public class PlayerController3D : MonoBehaviour
 
     void Update()
     {
-        if (Keyboard.current == null) return;
-
         // Ground Check
         if (groundCheck != null)
         {
@@ -58,11 +84,16 @@ public class PlayerController3D : MonoBehaviour
 
         if (isGrounded)
         {
+            coyoteTimeCounter = coyoteTime;
             canDoubleJump = true;
         }
+        else
+        {
+            coyoteTimeCounter -= Time.deltaTime;
+        }
 
-        // Jump Buffering: If we land and have a jump buffered, jump!
-        if (Keyboard.current.spaceKey.wasPressedThisFrame)
+        // Jump Input Capture
+        if (jumpAction != null && jumpAction.action.WasPressedThisFrame())
         {
             jumpBufferCounter = jumpBufferTime;
         }
@@ -71,22 +102,22 @@ public class PlayerController3D : MonoBehaviour
             jumpBufferCounter -= Time.deltaTime;
         }
 
-        if (jumpBufferCounter > 0 && isGrounded)
+        // Jumping Logic: Coyote Time + Buffer
+        if (jumpBufferCounter > 0 && coyoteTimeCounter > 0)
         {
-            Debug.Log("<color=green><b>[SUCCESS]</b> Ground Jump Triggered!</color>");
             Jump();
             jumpBufferCounter = 0;
+            coyoteTimeCounter = 0; // Prevent jumping multiple times in one coyote window
         }
-        else if (Keyboard.current.spaceKey.wasPressedThisFrame && canDoubleJump)
+        else if (jumpAction != null && jumpAction.action.WasPressedThisFrame() && canDoubleJump)
         {
-            Debug.Log("<color=cyan><b>[SUCCESS]</b> Double Jump Triggered!</color>");
             Jump();
             canDoubleJump = false;
         }
 
         Move();
 
-        if (Keyboard.current.leftShiftKey.wasPressedThisFrame && Time.time > lastDashTime + dashCooldown)
+        if (dashAction != null && dashAction.action.WasPressedThisFrame() && Time.time > lastDashTime + dashCooldown)
         {
             StartCoroutine(Dash());
         }
@@ -96,25 +127,22 @@ public class PlayerController3D : MonoBehaviour
     {
         if (isDashing) return;
 
-        float moveX = 0f;
-        float moveZ = 0f;
-
-        if (Keyboard.current.aKey.isPressed) moveX = -1f;
-        if (Keyboard.current.dKey.isPressed) moveX = 1f;
-        if (Keyboard.current.wKey.isPressed) moveZ = 1f;
-        if (Keyboard.current.sKey.isPressed) moveZ = -1f;
-
-        Vector3 move = transform.right * moveX + transform.forward * moveZ;
+        Vector2 moveInput = Vector2.zero;
+        if (moveAction != null) moveInput = moveAction.action.ReadValue<Vector2>();
         
-        Vector3 vel = rb.linearVelocity; 
-        rb.linearVelocity = new Vector3(move.x * moveSpeed, vel.y, move.z * moveSpeed);
+        float moveX = moveInput.x;
+        float currentYVel = rb.linearVelocity.y;
+        rb.linearVelocity = new Vector3(moveX * moveSpeed, currentYVel, 0);
     }
 
     void Jump()
     {
-        // Reset Y velocity for consistent jump height
-        rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
+        // Preserve horizontal velocity but reset Y for consistent jump height
+        Vector3 currentVel = rb.linearVelocity;
+        rb.linearVelocity = new Vector3(currentVel.x, 0, 0); 
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        
+        if (UIManager.Instance != null) UIManager.Instance.DisplayNotification("Jump!");
     }
 
     IEnumerator Dash()
@@ -122,13 +150,10 @@ public class PlayerController3D : MonoBehaviour
         isDashing = true;
         lastDashTime = Time.time;
 
-        float moveX = 0f;
-        float moveZ = 0f;
-
-        if (Keyboard.current.aKey.isPressed) moveX = -1f;
-        if (Keyboard.current.dKey.isPressed) moveX = 1f;
-        if (Keyboard.current.wKey.isPressed) moveZ = 1f;
-        if (Keyboard.current.sKey.isPressed) moveZ = -1f;
+        Vector2 moveInput = Vector2.zero;
+        if (moveAction != null) moveInput = moveAction.action.ReadValue<Vector2>();
+        float moveX = moveInput.x;
+        float moveZ = moveInput.y;
 
         Vector3 dashDir = (transform.right * moveX + transform.forward * moveZ).normalized;
         if (dashDir == Vector3.zero) dashDir = transform.forward;
@@ -148,7 +173,6 @@ public class PlayerController3D : MonoBehaviour
         }
     }
 
-    // THIS WILL DRAW THE GROUND CHECK SPHERE IN THE SCENE VIEW
     private void OnDrawGizmos()
     {
         Gizmos.color = isGrounded ? Color.green : Color.red;

@@ -23,38 +23,17 @@ public class LaserShooter : MonoBehaviour
     {
         if (laserPrefab == null) return;
 
-        // Spawn the laser at the shooter's position and orientation
         GameObject laser = Instantiate(laserPrefab, transform.position, transform.rotation);
-        
-        // Add movement component or just set its velocity if it has a Rigidbody
-        LaserProjectile proj = laser.AddComponent<LaserProjectile>();
-        proj.speed = laserSpeed;
-        proj.lifeTime = laserLifeTime;
-    }
-}
 
-public class LaserProjectile : MonoBehaviour
-{
-    public float speed;
-    public float lifeTime;
-
-    void Start()
-    {
-        Destroy(gameObject, lifeTime);
-    }
-
-    void Update()
-    {
-        // Move in the forward direction of the object
-        transform.Translate(Vector3.forward * speed * Time.deltaTime);
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Player"))
+        // LaserProjectile should be on the prefab; configure its values here
+        if (laser.TryGetComponent(out LaserProjectile proj))
         {
-            Debug.Log("<color=red>Killed by Laser!</color>");
-            GameManager.Instance.GameOver();
+            proj.speed = laserSpeed;
+            proj.lifeTime = laserLifeTime;
+        }
+        else
+        {
+            Debug.LogWarning("LaserProjectile component missing on laserPrefab assigned to " + gameObject.name);
         }
     }
 }
