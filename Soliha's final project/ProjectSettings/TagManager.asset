@@ -5,7 +5,6 @@ TagManager:
   serializedVersion: 3
   tags:
   - Floor
-  - platform
   layers:
   - Default
   - TransparentFX
