@@ -25,6 +25,7 @@ public class KongregateAPIController : MonoBehaviour
 
         DontDestroyOnLoad(gameObject);
         gameObject.name = "KongregateAPI";
+#if !UNITY_EDITOR && UNITY_WEBGL
         try
         {
             KAPIInit();
@@ -33,6 +34,7 @@ public class KongregateAPIController : MonoBehaviour
         {
             Debug.LogWarning("Couldn't start the Kongregate API");
         }
+#endif
     }
 
 

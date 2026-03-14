@@ -10,17 +10,22 @@ public class Platform : MonoBehaviour
 {
     [SerializeField] AudioSource bulletbounce = null;
     public float jumpForce = 10f;
+    [Tooltip("If true, this is a boost platform that speeds up the laser while the player is airborne")]
+    public bool isBoostPlatform = false;
     public bool destroy;
-    private Transform camera;
+    private Transform mainCamera;
+    private static Laser_kill laserRef;
 
     private void Start()
     {
-        camera = Camera.main.transform;
+        mainCamera = Camera.main.transform;
         bulletbounce = GetComponent<AudioSource>();
+        if (laserRef == null)
+            laserRef = FindAnyObjectByType<Laser_kill>();
     }
     private void Update()
     {
-        if(destroy && camera.position.y - 10 > transform.position.y)
+        if(destroy && mainCamera.position.y - 10 > transform.position.y)
         {
             Destroy(gameObject);
         }
@@ -38,10 +43,18 @@ public class Platform : MonoBehaviour
                     rb = collision.collider.GetComponentInParent<Rigidbody2D>();
                     if (rb != null)
                     {
-                        Vector2 velocity = rb.velocity;
+                        Vector2 velocity = rb.linearVelocity;
                         velocity.y = jumpForce;
-                        rb.velocity = velocity;
-                        
+                        rb.linearVelocity = velocity;
+                    }
+
+                    // Boost platform speeds up laser, normal platform resets it
+                    if (laserRef != null)
+                    {
+                        if (isBoostPlatform)
+                            laserRef.BoostSpeed();
+                        else
+                            laserRef.ResetSpeed();
                     }
                     return;
                 }
@@ -49,17 +62,13 @@ public class Platform : MonoBehaviour
             rb = collision.collider.GetComponent<Rigidbody2D>();
             if (rb != null)
             {
-                Vector2 velocity = rb.velocity;
+                Vector2 velocity = rb.linearVelocity;
                 velocity.y = jumpForce;
-                rb.velocity = velocity;
+                rb.linearVelocity = velocity;
             }
 
-            Bullet bullet = collision.collider.GetComponent<Bullet>();
-            Rigidbody2D bulletrb = collision.collider.GetComponent<Rigidbody2D>();
-            if(bullet != null)
+            if (bulletbounce != null && bulletbounce.enabled)
             {
-                bullet.LevelUpBullet();
-                bulletbounce.pitch = 1 * bulletrb.velocity.y;
                 bulletbounce.Play();
             }
         }

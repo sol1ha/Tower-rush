@@ -1,34 +1,46 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Manages the jetpack visual and tells the <see cref="Player"/> when its active
 /// </summary>
 public class PlayerJetpack : MonoBehaviour
 {
-    public bool hasJetpack = false;
-    public float jetPackDuration;
+    public float jetPackDuration = 5f;
     public float jetPackThrust;
+
+    public bool hasJetpack = false;
 
     Player player;
     SpriteRenderer jetpackVisual;
     AudioSource audioSource;
-    ParticleSystem particleSystem;
+    ParticleSystem jetpackParticles;
+    Laser_kill laser;
     float timer;
     // Start is called before the first frame update
     void Start()
     {
         jetpackVisual = GetComponent<SpriteRenderer>();
         player = GetComponentInParent<Player>();
-        player.SetJetpackThrust(jetPackThrust);
+        if (player == null)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj != null)
+                player = playerObj.GetComponent<Player>();
+        }
+        if (player != null)
+            player.SetJetpackThrust(jetPackThrust);
         audioSource = GetComponent<AudioSource>();
-        particleSystem = GetComponent<ParticleSystem>();
+        jetpackParticles = GetComponent<ParticleSystem>();
+        laser = FindAnyObjectByType<Laser_kill>();
     }
 
-    // Update is called once per frame
     void Update()
     {
+        if (player == null) return;
+
         if (hasJetpack || player.IsJetpacking)
         {
             jetpackVisual.enabled = true;
@@ -38,17 +50,19 @@ public class PlayerJetpack : MonoBehaviour
             jetpackVisual.enabled = false;
         }
 
-        if (hasJetpack && Input.GetKeyDown(KeyCode.W))
+        if (hasJetpack && Keyboard.current != null && Keyboard.current.wKey.wasPressedThisFrame)
         {
             hasJetpack = false;
-            particleSystem.Play();
+            jetpackParticles.Play();
             player.IsJetpacking = true;
             timer = Time.time + jetPackDuration;
             audioSource.Play();
+            if (laser != null) laser.BoostSpeed();
         }
-        if(player.IsJetpacking && Time.time > timer)
+        if (player.IsJetpacking && Time.time > timer)
         {
             player.IsJetpacking = false;
+            if (laser != null) laser.ResetSpeed();
         }
     }
 }

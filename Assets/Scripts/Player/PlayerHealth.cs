@@ -17,7 +17,7 @@ public class PlayerHealth : MonoBehaviour
     public BoxCollider2D extraCollider;
     public SpriteRenderer shieldVisual;
 
-    private BoxCollider2D collider;
+    private BoxCollider2D playerCollider;
     private int recordHeight;
     private AudioSource audioSource;
 
@@ -28,7 +28,7 @@ public class PlayerHealth : MonoBehaviour
     void Start()
     {
         bloodHitPS = GetComponent<ParticleSystem>();
-        collider = GetComponent<BoxCollider2D>();
+        playerCollider = GetComponent<BoxCollider2D>();
         audioSource = GetComponent<AudioSource>();
         PlayerKillLimit.PlayerKill += PlayerKillLimit_PlayerKill;
     }
@@ -72,7 +72,7 @@ public class PlayerHealth : MonoBehaviour
         audioSource.Play();
         PlayerKillLimit.PlayerKill -= PlayerKillLimit_PlayerKill;
         GetComponent<SpriteRenderer>().sprite = deathSprite;
-        collider.enabled = false;
+        playerCollider.enabled = false;
         extraCollider.enabled = false;
         recordHeight = (int)transform.position.y;
         HighScoreSet.SetHighscore(recordHeight + HighScoreSet.gameScore);

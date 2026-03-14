@@ -23,4 +23,10 @@ public class GameManager : MonoBehaviour
     {
         instance.play = true;
     }
+
+    public void GameOver()
+    {
+        play = false;
+        Debug.Log("Game Over!");
+    }
 }

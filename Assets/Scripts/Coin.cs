@@ -25,7 +25,6 @@ public class Coin : MonoBehaviour
             this.enabled = false;
             Destroy(gameObject,1);
             spriteRenderer.enabled = false;
-            collision.GetComponent<PlayerMoney>().GiveMoney(1);
             audioSource.Play();
         }
     }

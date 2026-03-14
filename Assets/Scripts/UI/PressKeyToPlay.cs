@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Simple script which handles game init and sets the player's <see cref="Rigidbody2D"/> constraints
@@ -14,7 +15,7 @@ public class PressKeyToPlay : MonoBehaviour
     }
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W))
+        if (Keyboard.current != null && (Keyboard.current.spaceKey.wasPressedThisFrame || Keyboard.current.wKey.wasPressedThisFrame))
         {
             GameManager.StartGame();
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;

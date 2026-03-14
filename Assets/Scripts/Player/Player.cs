@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Handles the player's movement and jetpacking.
@@ -13,6 +14,7 @@ public class Player : MonoBehaviour
     Rigidbody2D rb;
 
     float movement = 0f;
+    public float HorizontalMovement => movement;
     float jetPackThrust;
 
     void Start()
@@ -23,7 +25,16 @@ public class Player : MonoBehaviour
     void Update()
     {
         if (GameManager.Playing())
-            movement = Input.GetAxis("Horizontal") * movementSpeed;
+        {
+            float horizontal = 0f;
+            var kb = Keyboard.current;
+            if (kb != null)
+            {
+                if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) horizontal -= 1f;
+                if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) horizontal += 1f;
+            }
+            movement = horizontal * movementSpeed;
+        }
     }
 
     void FixedUpdate()
@@ -33,13 +44,13 @@ public class Player : MonoBehaviour
             Vector2 velocity;    
             velocity.y = jetPackThrust; //Jittery TODO FIX, move to Update and use the transform to move it in steps.
             velocity.x = movement;
-            rb.velocity = velocity;
+            rb.linearVelocity = velocity;
         }
         else
         {
-            Vector2 velocity = rb.velocity;
+            Vector2 velocity = rb.linearVelocity;
             velocity.x = movement;
-            rb.velocity = velocity;
+            rb.linearVelocity = velocity;
         }
     }
     /// <summary>

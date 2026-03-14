@@ -15,10 +15,14 @@ public class PlayerKillLimit : MonoBehaviour
     public static event EventHandler<EventArgs> PlayerKill;
 
     public static bool triggerEvent;
-    
+    public float followOffset = -15f;
+
+    private Transform mainCamera;
+
     void Start()
     {
         triggerEvent = false;
+        mainCamera = Camera.main.transform;
     }
 
     void Update()
@@ -27,11 +31,19 @@ public class PlayerKillLimit : MonoBehaviour
         {
             triggerEvent = false;
             PlayerKill?.Invoke(this, EventArgs.Empty);
-        }   
+        }
+
+        // Follow camera vertically, always staying below the screen
+        if (mainCamera != null)
+        {
+            Vector3 pos = transform.position;
+            pos.y = mainCamera.position.y + followOffset;
+            transform.position = pos;
+        }
     }
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if(collision.tag == "Player")
+        if(GameManager.Playing() && collision.CompareTag("Player"))
         {
             PlayerKill?.Invoke(this, EventArgs.Empty);
         }

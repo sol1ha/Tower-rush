@@ -24,13 +24,6 @@ public class HighScoreSet : MonoBehaviour
         {
             PlayerPrefs.SetInt(Constants.HighScore_Pref, score);
         }
-        try
-        {
-            SubmitScore.SubmitHighScore(score);
-        }
-        catch
-        {
-            Debug.LogWarning("No conectado a kongregate");
-        }
+        // Kongregate submission removed (deprecated)
     }
 }
