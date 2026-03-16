@@ -2,8 +2,8 @@ using UnityEngine;
 
 public class LaserProjectile : MonoBehaviour
 {
-    public float speed;
-    public float lifeTime;
+    public float speed = 10f;
+    public float lifeTime = 5f;
 
     void Start()
     {
@@ -19,7 +19,8 @@ public class LaserProjectile : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            GameManager.Instance.GameOver();
+            if (GameManager.Instance != null)
+                GameManager.Instance.GameOver();
             Destroy(gameObject);
         }
     }

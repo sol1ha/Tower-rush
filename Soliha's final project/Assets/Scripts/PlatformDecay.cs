@@ -3,7 +3,7 @@ using System.Collections;
 
 public class PlatformDecay : MonoBehaviour
 {
-    public float decayTime = 5f;
+    public float baseDecayTime = 5f;
     private bool playerLeft = false;
 
     private void OnCollisionExit(Collision collision)
@@ -17,6 +17,11 @@ public class PlatformDecay : MonoBehaviour
 
     private IEnumerator DecayRoutine()
     {
+        // Platforms decay faster at higher difficulty
+        float decayTime = baseDecayTime;
+        if (GameManager.Instance != null)
+            decayTime = baseDecayTime / GameManager.Instance.DifficultyMultiplier;
+
         yield return new WaitForSeconds(decayTime);
         Destroy(gameObject);
     }

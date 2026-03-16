@@ -2,14 +2,19 @@ using UnityEngine;
 
 public class RisingFloor3D : MonoBehaviour
 {
-    public float moveSpeed = 0.2f;
+    public float baseMoveSpeed = 0.2f;
+    public float boostMoveSpeed = 8f; // Fast speed when player is jetpacking
     public float delayBeforeStart = 5f;
     private float startTime;
+    private PlayerController3D player;
 
     void Start()
     {
         startTime = Time.time + delayBeforeStart;
-        
+
+        // Try to find the player automatically
+        player = Object.FindFirstObjectByType<PlayerController3D>();
+
         if (UIManager.Instance != null)
             UIManager.Instance.DisplayNotification("The floor is rising!");
     }
@@ -18,7 +23,18 @@ public class RisingFloor3D : MonoBehaviour
     {
         if (Time.time < startTime) return;
 
-        transform.Translate(Vector3.up * moveSpeed * Time.deltaTime);
+        // Speed increases with difficulty level
+        float speed = baseMoveSpeed;
+        if (GameManager.Instance != null)
+            speed = baseMoveSpeed * GameManager.Instance.DifficultyMultiplier;
+
+        // Move the rising floor exceptionally fast when the player uses the boost pad (Jetpack)
+        if (player != null && player.IsJetPacking)
+        {
+            speed = boostMoveSpeed;
+        }
+
+        transform.Translate(Vector3.up * speed * Time.deltaTime);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -29,11 +45,8 @@ public class RisingFloor3D : MonoBehaviour
         }
         else if (other.CompareTag("Player"))
         {
-            GameManager.Instance.GameOver();
-        }
-        else if (other.name.ToLower().Contains("floor") && other.gameObject != gameObject)
-        {
-            Destroy(gameObject); 
+            if (GameManager.Instance != null)
+                GameManager.Instance.GameOver();
         }
     }
 }

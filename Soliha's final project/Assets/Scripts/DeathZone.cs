@@ -6,12 +6,13 @@ public class DeathZone : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            if (UIManager.Instance != null) UIManager.Instance.DisplayNotification("Fell off!");
-            GameManager.Instance.GameOver();
+            if (UIManager.Instance != null)
+                UIManager.Instance.DisplayNotification("Fell off!");
+            if (GameManager.Instance != null)
+                GameManager.Instance.GameOver();
         }
         else if (other.CompareTag("Hazard"))
         {
-            // Laser hits the floor -> "its gone aswell"
             Destroy(other.gameObject);
         }
     }

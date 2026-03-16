@@ -5,6 +5,8 @@ TagManager:
   serializedVersion: 3
   tags:
   - Floor
+  - platform
+  - hazard
   layers:
   - Default
   - TransparentFX

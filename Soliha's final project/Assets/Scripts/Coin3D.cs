@@ -14,8 +14,9 @@ public class Coin3D : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            GameManager.Instance.AddScore(pointValue);
-            if (UIManager.Instance != null) UIManager.Instance.DisplayNotification("Coin Collected!");
+            // Use AddCoinScore for combo multiplier tracking
+            if (GameManager.Instance != null)
+                GameManager.Instance.AddCoinScore(pointValue);
             Destroy(gameObject);
         }
     }

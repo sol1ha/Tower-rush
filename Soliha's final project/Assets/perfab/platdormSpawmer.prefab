@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1385634699841429983
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3747248115139696255}
+  - component: {fileID: 5855803267447157733}
+  m_Layer: 0
+  m_Name: platdormSpawmer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3747248115139696255
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1385634699841429983}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5855803267447157733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1385634699841429983}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae2c20501a874d94687cb2fc87a21b9a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PlatformSpawner3D
+  platformPrefab: {fileID: 5258958885536049813, guid: ac064c7711dd3e34b8320471c0ab4933, type: 3}
+  coinPrefab: {fileID: 7363187569987554122, guid: fbcc2509b544a044d9ed018e0c19b2f1, type: 3}
+  spikePrefab: {fileID: 8479845958317719998, guid: c224782f9fde8cf48a8ce56ecc6197d9, type: 3}
+  platformSpacing: 4
+  startY: 4.39
+  xPositions:
+  - 2.79
+  - 3.615
+  - 4.44
+  coinSpawnChance: 0.3
+  baseSpikeChance: 0.2
+  player: {fileID: 0}

@@ -11,6 +11,10 @@ public class PlayerController3D : MonoBehaviour
     [Header("Jump Settings")]
     public float jumpForce = 7f;
 
+    [Header("JetPack")]
+    public float jetPackForce = 12f;
+    public float jetPackDuration = 3f;
+
     [Header("Physics")]
     public LayerMask groundLayer;
     public Transform groundCheck;
@@ -20,13 +24,17 @@ public class PlayerController3D : MonoBehaviour
     private bool isGrounded;
     private bool canDoubleJump = false;
     private bool isDashing = false;
+    private bool isJetPacking = false;
+    public bool IsJetPacking => isJetPacking;
     private float dashCooldown = 1f;
     private float lastDashTime;
+    private float lockedZ;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
+        lockedZ = transform.position.z;
 
         if (groundCheck == null)
         {
@@ -36,14 +44,20 @@ public class PlayerController3D : MonoBehaviour
 
     void Update()
     {
-        // Ground check
+        // During jetpack: fly up, still allow left/right
+        if (isJetPacking)
+        {
+            float moveX = Input.GetAxisRaw("Horizontal");
+            rb.linearVelocity = new Vector3(moveX * moveSpeed, jetPackForce, 0);
+            return;
+        }
+
         Vector3 checkPos = groundCheck != null ? groundCheck.position : transform.position + Vector3.down * 1f;
         isGrounded = Physics.CheckSphere(checkPos, groundDistance, groundLayer);
 
         if (isGrounded)
             canDoubleJump = true;
 
-        // Jump — Space
         if (Input.GetKeyDown(KeyCode.Space))
         {
             if (isGrounded)
@@ -57,7 +71,6 @@ public class PlayerController3D : MonoBehaviour
             }
         }
 
-        // Dash — Left Shift
         if (Input.GetKeyDown(KeyCode.LeftShift) && Time.time > lastDashTime + dashCooldown)
         {
             StartCoroutine(Dash());
@@ -66,11 +79,19 @@ public class PlayerController3D : MonoBehaviour
         Move();
     }
 
+    void LateUpdate()
+    {
+        Vector3 pos = transform.position;
+        if (pos.z != lockedZ)
+        {
+            transform.position = new Vector3(pos.x, pos.y, lockedZ);
+        }
+    }
+
     void Move()
     {
         if (isDashing) return;
 
-        // WASD / Arrow keys — A/D or Left/Right for horizontal
         float moveX = Input.GetAxisRaw("Horizontal");
         float currentYVel = rb.linearVelocity.y;
         rb.linearVelocity = new Vector3(moveX * moveSpeed, currentYVel, 0);
@@ -99,11 +120,30 @@ public class PlayerController3D : MonoBehaviour
         isDashing = false;
     }
 
+    public void ActivateJetPack()
+    {
+        if (!isJetPacking)
+            StartCoroutine(JetPackRoutine());
+    }
+
+    private IEnumerator JetPackRoutine()
+    {
+        isJetPacking = true;
+        yield return new WaitForSeconds(jetPackDuration);
+        isJetPacking = false;
+    }
+
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Hazard") || other.CompareTag("RisingFloor"))
+        if (other.CompareTag("Hazard"))
         {
-            GameManager.Instance.GameOver();
+            if (GameManager.Instance != null)
+                GameManager.Instance.TakeDamage();
+        }
+        else if (other.CompareTag("RisingFloor"))
+        {
+            if (GameManager.Instance != null)
+                GameManager.Instance.GameOver();
         }
     }
 
