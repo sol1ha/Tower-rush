@@ -25,6 +25,9 @@ public class ReloadScene : MonoBehaviour
     {
         if (firecd && Time.time > cd && (Keyboard.current != null && Keyboard.current.anyKey.isPressed || Mouse.current != null && Mouse.current.leftButton.isPressed))
         {
+            if (LeaderboardUI.Instance != null)
+                LeaderboardUI.Instance.Hide();
+
             UnityEngine.SceneManagement.SceneManager.LoadScene(0);
         }
     }

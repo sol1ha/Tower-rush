@@ -1,10 +1,12 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// Holds the <see cref="PlayerKill"/> event and triggers it when the player falls.
+/// Kill zone sits right at the bottom edge of the camera so the player dies
+/// the moment the rising floor almost catches them.
 /// </summary>
 public class PlayerKillLimit : MonoBehaviour
 {
@@ -15,14 +17,15 @@ public class PlayerKillLimit : MonoBehaviour
     public static event EventHandler<EventArgs> PlayerKill;
 
     public static bool triggerEvent;
-    public float followOffset = -15f;
 
     private Transform mainCamera;
+    private Camera cam;
 
     void Start()
     {
         triggerEvent = false;
-        mainCamera = Camera.main.transform;
+        cam = Camera.main;
+        mainCamera = cam.transform;
     }
 
     void Update()
@@ -33,14 +36,15 @@ public class PlayerKillLimit : MonoBehaviour
             PlayerKill?.Invoke(this, EventArgs.Empty);
         }
 
-        // Follow camera vertically, always staying below the screen
-        if (mainCamera != null)
+        // Position the kill zone right at the bottom edge of the camera view
+        if (mainCamera != null && cam != null)
         {
             Vector3 pos = transform.position;
-            pos.y = mainCamera.position.y + followOffset;
+            pos.y = mainCamera.position.y - cam.orthographicSize + 0.3f;
             transform.position = pos;
         }
     }
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if(GameManager.Playing() && collision.CompareTag("Player"))
@@ -48,6 +52,7 @@ public class PlayerKillLimit : MonoBehaviour
             PlayerKill?.Invoke(this, EventArgs.Empty);
         }
     }
+
     public static void TriggerEventStatic()
     {
         triggerEvent = true;
