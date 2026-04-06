@@ -28,9 +28,12 @@ public class PlayerHealth : MonoBehaviour
     private int recordHeight;
     private AudioSource audioSource;
 
+    private Sprite originalSprite;
+
     private void Awake()
     {
         health = maxHealth;
+        originalSprite = GetComponent<SpriteRenderer>().sprite;
     }
 
     void Start()
@@ -154,6 +157,10 @@ public class PlayerHealth : MonoBehaviour
 
     void KillPlayer()
     {
+        // Immediately stop all gameplay
+        if (GameManager.instance != null)
+            GameManager.instance.play = false;
+
         audioSource.Play();
         PlayerKillLimit.PlayerKill -= PlayerKillLimit_PlayerKill;
         GetComponent<SpriteRenderer>().sprite = deathSprite;
@@ -161,5 +168,26 @@ public class PlayerHealth : MonoBehaviour
         extraCollider.enabled = false;
         recordHeight = (int)transform.position.y;
         HighScoreSet.SetHighscore(recordHeight + HighScoreSet.gameScore);
+    }
+
+    public void RestoreForContinue()
+    {
+        health = maxHealth;
+        GetComponent<SpriteRenderer>().sprite = originalSprite;
+        
+        playerCollider.enabled = true;
+        extraCollider.enabled = true;
+        
+        // Give player a little bump upwards and pause momentum so they don't fall back immediately
+        transform.position += Vector3.up * 3f; 
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        if (rb != null) rb.linearVelocity = Vector2.zero;
+        
+        // Reset invulnerability frames
+        lastHitTime = Time.time + 1.5f; 
+        
+        // Clear kill flag and resubscribe
+        PlayerKillLimit.triggerEvent = false;
+        PlayerKillLimit.PlayerKill += PlayerKillLimit_PlayerKill;
     }
 }

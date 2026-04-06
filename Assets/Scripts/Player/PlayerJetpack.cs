@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -50,7 +50,7 @@ public class PlayerJetpack : MonoBehaviour
             jetpackVisual.enabled = false;
         }
 
-        if (hasJetpack && Keyboard.current != null && Keyboard.current.wKey.wasPressedThisFrame)
+        if (hasJetpack && Keyboard.current != null && (Keyboard.current.wKey.wasPressedThisFrame || Keyboard.current.spaceKey.wasPressedThisFrame))
         {
             hasJetpack = false;
             jetpackParticles.Play();

@@ -37,14 +37,19 @@ public class DynamicBackgrounds : MonoBehaviour
         fadingClouds = false;
 
         // Clouds start invisible — they fade IN as ground fades out
-        foreach (SpriteRenderer sr in cloudSprites)
+        if (cloudSprites != null)
         {
-            sr.color = whiteNoAlpha;
+            foreach (SpriteRenderer sr in cloudSprites)
+            {
+                if (sr != null) sr.color = whiteNoAlpha;
+            }
         }
     }
 
     void Update()
     {
+        if (player == null) return;
+
         if (player.position.y > groundCeiling)
         {
             fadingGround = true;
@@ -57,22 +62,31 @@ public class DynamicBackgrounds : MonoBehaviour
         // Ground fades out, clouds fade in
         if (fadingGround)
         {
-            foreach (SpriteRenderer sr in groundSprites)
+            if (groundSprites != null)
             {
-                sr.color = Color.Lerp(sr.color, whiteNoAlpha, groundFadeSpeed * Time.deltaTime);
+                foreach (SpriteRenderer sr in groundSprites)
+                {
+                    if (sr != null) sr.color = Color.Lerp(sr.color, whiteNoAlpha, groundFadeSpeed * Time.deltaTime);
+                }
             }
-            foreach (SpriteRenderer sr in cloudSprites)
+            if (cloudSprites != null)
             {
-                sr.color = Color.Lerp(sr.color, whiteFullAlpha, groundFadeSpeed * Time.deltaTime);
+                foreach (SpriteRenderer sr in cloudSprites)
+                {
+                    if (sr != null) sr.color = Color.Lerp(sr.color, whiteFullAlpha, groundFadeSpeed * Time.deltaTime);
+                }
             }
         }
 
         // Clouds fade out, revealing space behind
         if (fadingClouds)
         {
-            foreach (SpriteRenderer sr in cloudSprites)
+            if (cloudSprites != null)
             {
-                sr.color = Color.Lerp(sr.color, whiteNoAlpha, cloudFadeSpeed * Time.deltaTime);
+                foreach (SpriteRenderer sr in cloudSprites)
+                {
+                    if (sr != null) sr.color = Color.Lerp(sr.color, whiteNoAlpha, cloudFadeSpeed * Time.deltaTime);
+                }
             }
         }
     }

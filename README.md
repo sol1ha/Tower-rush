@@ -44,3 +44,9 @@ You can play the game right away at [itch.io](https://svartskogen.itch.io/infini
 ## License
 
 MIT @ [Svartskogen](https://github.com/Svartskogen)
+
+---
+
+## 🛠️ Plugin Integration
+
+For detailed instructions on integrating the **Luxodd SDK** and **Arcade Controls**, please refer to the [Luxodd Integration Guide](LUXODD_INTEGRATION.md).

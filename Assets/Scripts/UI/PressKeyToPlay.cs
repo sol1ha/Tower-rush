@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -11,7 +11,9 @@ public class PressKeyToPlay : MonoBehaviour
     private Rigidbody2D rb;
     void Start()
     {
-        rb = GetComponent<Rigidbody2D>();   
+        rb = GetComponent<Rigidbody2D>();
+        // Stay disabled until the player clicks the PLAY button in the main menu
+        this.enabled = false;
     }
     void Update()
     {
@@ -19,6 +21,8 @@ public class PressKeyToPlay : MonoBehaviour
         {
             GameManager.StartGame();
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+            // Give the bunny an initial upward jump when the game starts
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 12f);
             this.enabled = false;
         }
     }

@@ -19,13 +19,7 @@ public class LeaderboardUI : MonoBehaviour
     public Canvas canvas;
 
     private GameObject leaderboardPanel;
-    private GameObject usernamePanel;
-    private InputField usernameInput;
-    private Text messageText;
     private List<Text[]> rows = new List<Text[]>(); // Each row: rank, icon, name, score, stars
-
-    private int pendingScore = 0;
-    private bool waitingForName = false;
 
     private static readonly string[] MEDALS = { "1st", "2nd", "3rd" };
     private static readonly Dictionary<string, string> FRUIT_DISPLAY = new Dictionary<string, string>()
@@ -44,24 +38,17 @@ public class LeaderboardUI : MonoBehaviour
 
     void Start()
     {
-        PlayerKillLimit.PlayerKill += OnPlayerDeath;
+        // PlayerKillLimit.PlayerKill += OnPlayerDeath; // Replaced by InGameTransaction flow
 
         if (canvas == null)
-            canvas = FindFirstObjectByType<Canvas>();
+            canvas = FindAnyObjectByType<Canvas>();
 
         BuildLeaderboardPanel();
-        BuildUsernamePanel();
     }
 
     void OnDestroy()
     {
-        PlayerKillLimit.PlayerKill -= OnPlayerDeath;
-    }
-
-    void Update()
-    {
-        if (waitingForName && Input.GetKeyDown(KeyCode.Return))
-            OnSubmitName();
+        // PlayerKillLimit.PlayerKill -= OnPlayerDeath;
     }
 
     // ========== AUTO-BUILD UI ==========
@@ -105,96 +92,6 @@ public class LeaderboardUI : MonoBehaviour
         leaderboardPanel.SetActive(false);
     }
 
-    void BuildUsernamePanel()
-    {
-        usernamePanel = CreatePanel("UsernamePanel", canvas.transform);
-        Image bg = usernamePanel.GetComponent<Image>();
-        bg.color = new Color(0.05f, 0.1f, 0.2f, 0.95f);
-
-        // Title
-        CreateText("NEW HIGH SCORE!", usernamePanel.transform,
-            new Vector2(0, 100), 28, FontStyle.Bold, new Color(1f, 0.84f, 0f));
-
-        // Score message
-        messageText = CreateText("Score: 0 - Enter your name!", usernamePanel.transform,
-            new Vector2(0, 50), 20, FontStyle.Normal, Color.white);
-
-        // Input field
-        GameObject inputObj = new GameObject("UsernameInput");
-        inputObj.transform.SetParent(usernamePanel.transform, false);
-        RectTransform inputRect = inputObj.AddComponent<RectTransform>();
-        inputRect.anchoredPosition = new Vector2(0, -10);
-        inputRect.sizeDelta = new Vector2(300, 40);
-
-        Image inputBg = inputObj.AddComponent<Image>();
-        inputBg.color = new Color(0.15f, 0.2f, 0.3f, 1f);
-
-        usernameInput = inputObj.AddComponent<InputField>();
-        usernameInput.characterLimit = 12;
-
-        // Input text
-        GameObject inputTextObj = new GameObject("InputText");
-        inputTextObj.transform.SetParent(inputObj.transform, false);
-        RectTransform textRect = inputTextObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = new Vector2(10, 0);
-        textRect.offsetMax = new Vector2(-10, 0);
-        Text inputText = inputTextObj.AddComponent<Text>();
-        inputText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        inputText.fontSize = 22;
-        inputText.color = Color.white;
-        inputText.alignment = TextAnchor.MiddleCenter;
-        usernameInput.textComponent = inputText;
-
-        // Placeholder
-        GameObject placeholderObj = new GameObject("Placeholder");
-        placeholderObj.transform.SetParent(inputObj.transform, false);
-        RectTransform phRect = placeholderObj.AddComponent<RectTransform>();
-        phRect.anchorMin = Vector2.zero;
-        phRect.anchorMax = Vector2.one;
-        phRect.offsetMin = new Vector2(10, 0);
-        phRect.offsetMax = new Vector2(-10, 0);
-        Text placeholder = placeholderObj.AddComponent<Text>();
-        placeholder.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        placeholder.fontSize = 22;
-        placeholder.fontStyle = FontStyle.Italic;
-        placeholder.color = new Color(1, 1, 1, 0.3f);
-        placeholder.text = "Type your name...";
-        placeholder.alignment = TextAnchor.MiddleCenter;
-        usernameInput.placeholder = placeholder;
-
-        // Submit button
-        GameObject btnObj = new GameObject("SubmitButton");
-        btnObj.transform.SetParent(usernamePanel.transform, false);
-        RectTransform btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.anchoredPosition = new Vector2(0, -70);
-        btnRect.sizeDelta = new Vector2(200, 45);
-
-        Image btnBg = btnObj.AddComponent<Image>();
-        btnBg.color = new Color(0f, 0.6f, 0.3f, 1f);
-
-        Button btn = btnObj.AddComponent<Button>();
-        btn.onClick.AddListener(OnSubmitName);
-
-        GameObject btnTextObj = new GameObject("ButtonText");
-        btnTextObj.transform.SetParent(btnObj.transform, false);
-        RectTransform btnTextRect = btnTextObj.AddComponent<RectTransform>();
-        btnTextRect.anchorMin = Vector2.zero;
-        btnTextRect.anchorMax = Vector2.one;
-        btnTextRect.offsetMin = Vector2.zero;
-        btnTextRect.offsetMax = Vector2.zero;
-        Text btnText = btnTextObj.AddComponent<Text>();
-        btnText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        btnText.fontSize = 22;
-        btnText.text = "SUBMIT";
-        btnText.color = Color.white;
-        btnText.fontStyle = FontStyle.Bold;
-        btnText.alignment = TextAnchor.MiddleCenter;
-
-        usernamePanel.SetActive(false);
-    }
-
     // ========== HELPERS ==========
 
     GameObject CreatePanel(string name, Transform parent)
@@ -232,9 +129,9 @@ public class LeaderboardUI : MonoBehaviour
 
     void OnPlayerDeath(object sender, System.EventArgs e)
     {
-        pendingScore = ActualScoreDisplay.CurrentScore;
-        Debug.Log("LEADERBOARD: Player died! Score = " + pendingScore);
-        HighScoreSet.SetHighscore(pendingScore);
+        int score = ActualScoreDisplay.CurrentScore;
+        Debug.Log("LEADERBOARD: Player died! Score = " + score);
+        HighScoreSet.SetHighscore(score);
 
         if (LeaderboardManager.Instance == null)
         {
@@ -242,56 +139,15 @@ public class LeaderboardUI : MonoBehaviour
             return;
         }
 
-        if (pendingScore < LeaderboardManager.Instance.GetMinScoreToQualify())
+        if (score < LeaderboardManager.Instance.GetMinScoreToQualify())
         {
-            Debug.Log("LEADERBOARD: Score " + pendingScore + " too low (need " + LeaderboardManager.Instance.GetMinScoreToQualify() + ")");
+            Debug.Log("LEADERBOARD: Score " + score + " too low (need " + LeaderboardManager.Instance.GetMinScoreToQualify() + ")");
             return;
         }
 
-        string savedName = LeaderboardManager.Instance.GetSavedPlayerName();
-        Debug.Log("LEADERBOARD: Saved player name = '" + savedName + "'");
-
-        if (!string.IsNullOrEmpty(savedName))
-        {
-            LeaderboardManager.Instance.TryAddScore(savedName, pendingScore);
-            Debug.Log("LEADERBOARD: Showing leaderboard for returning player");
-            ShowLeaderboard();
-        }
-        else
-        {
-            Debug.Log("LEADERBOARD: Showing username entry for new player");
-            ShowUsernameEntry();
-        }
-    }
-
-    void ShowUsernameEntry()
-    {
-        waitingForName = true;
-        usernamePanel.SetActive(true);
-
-        if (usernameInput != null)
-        {
-            usernameInput.text = "";
-            usernameInput.ActivateInputField();
-        }
-
-        if (messageText != null)
-            messageText.text = "Score: " + pendingScore + " - Enter your name!";
-    }
-
-    void OnSubmitName()
-    {
-        string playerName = usernameInput != null ? usernameInput.text.Trim() : "";
-        if (string.IsNullOrEmpty(playerName))
-            playerName = "Player" + Random.Range(100, 999);
-        if (playerName.Length > 12)
-            playerName = playerName.Substring(0, 12);
-
-        waitingForName = false;
-        usernamePanel.SetActive(false);
-
+        string playerName = "amy_susu2"; // Default name
         LeaderboardManager.Instance.SetCurrentPlayer(playerName);
-        LeaderboardManager.Instance.TryAddScore(playerName, pendingScore);
+        LeaderboardManager.Instance.TryAddScore(playerName, score);
         ShowLeaderboard();
     }
 
@@ -347,6 +203,5 @@ public class LeaderboardUI : MonoBehaviour
     public void Hide()
     {
         if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
-        if (usernamePanel != null) usernamePanel.SetActive(false);
     }
 }

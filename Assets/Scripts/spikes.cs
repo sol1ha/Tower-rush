@@ -8,17 +8,34 @@ using UnityEngine;
 public class spikes : MonoBehaviour
 {
     public int damage = 1;
+    private Collider2D spikeCollider;
 
-    private void OnTriggerStay2D(Collider2D collision)
+    void Start()
     {
-        if (!collision.CompareTag("Player")) return;
+        spikeCollider = GetComponent<Collider2D>();
+    }
 
-        Rigidbody2D rb = collision.GetComponent<Rigidbody2D>();
-        PlayerHealth health = collision.GetComponent<PlayerHealth>();
+    private void OnTriggerEnter2D(Collider2D playerCollider)
+    {
+        if (!playerCollider.CompareTag("Player")) return;
 
-        if (health != null)
+        Rigidbody2D rb = playerCollider.GetComponent<Rigidbody2D>();
+        PlayerHealth health = playerCollider.GetComponent<PlayerHealth>();
+
+        if (health == null || spikeCollider == null) return;
+
+        // Check if player is landing on TOP of the spike
+        // Player's bottom edge must be above spike's top edge
+        float playerBottom = playerCollider.bounds.min.y;
+        float spikeTop = spikeCollider.bounds.max.y;
+
+        // If player's bottom is above spike's top and falling, they landed on the spike
+        bool isOnTopOfSpike = playerBottom >= spikeTop - 0.1f;
+        bool isFalling = rb == null || rb.linearVelocity.y <= 0.1f;
+
+        if (isOnTopOfSpike && isFalling)
         {
-            health.DamagePlayerIfLanded(damage, rb);
+            health.DamagePlayer(damage);
         }
     }
 }

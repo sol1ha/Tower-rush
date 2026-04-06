@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -21,8 +21,10 @@ public class Coin : MonoBehaviour
     {
         if(active && collision.tag == "Player")
         {
+            Debug.Log("Coin collected! Score increased by 5. New score: " + (HighScoreSet.gameScore + 5));
             active = false;
             this.enabled = false;
+            HighScoreSet.gameScore += 5;
             Destroy(gameObject,1);
             spriteRenderer.enabled = false;
             audioSource.Play();

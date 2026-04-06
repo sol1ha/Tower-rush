@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// Self-building main menu with styled buttons.
@@ -19,8 +20,8 @@ public class MainMenuUI : MonoBehaviour
     public Canvas canvas;
 
     [Header("Colors")]
-    public Color buttonColor = new Color(0.05f, 0.2f, 0.5f, 1f);
-    public Color buttonHighlight = new Color(0.1f, 0.35f, 0.7f, 1f);
+    public Color buttonColor = new Color(0.1f, 0.5f, 0.2f, 1f);
+    public Color buttonHighlight = new Color(0.2f, 0.7f, 0.3f, 1f);
     public Color titleColor = new Color(1f, 0.84f, 0f);
     public Color textColor = Color.white;
 
@@ -28,6 +29,8 @@ public class MainMenuUI : MonoBehaviour
     private GameObject helpPanel;
     private GameObject scoresPanel;
     private GameObject aboutPanel;
+    private Text currentPlayerText;
+    private InputField playerNameField;
 
     void Awake()
     {
@@ -38,7 +41,11 @@ public class MainMenuUI : MonoBehaviour
     void Start()
     {
         if (canvas == null)
-            canvas = FindFirstObjectByType<Canvas>();
+            canvas = FindAnyObjectByType<Canvas>();
+
+        Debug.Log("Canvas found: " + (canvas != null));
+
+        EnsureEventSystem();
 
         BuildMainMenu();
         BuildHelpPanel();
@@ -48,7 +55,8 @@ public class MainMenuUI : MonoBehaviour
 
     void Update()
     {
-        if (GameManager.Playing() && menuPanel != null && menuPanel.activeSelf)
+        // Only hide menu once the game is actually started (by PressKeyToPlay via Space)
+        if (menuPanel != null && menuPanel.activeSelf && GameManager.Playing())
         {
             menuPanel.SetActive(false);
         }
@@ -60,7 +68,7 @@ public class MainMenuUI : MonoBehaviour
     {
         menuPanel = CreatePanel("MainMenuPanel", canvas.transform);
         Image bg = menuPanel.GetComponent<Image>();
-        bg.color = new Color(0.02f, 0.05f, 0.15f, 0.9f);
+        bg.color = new Color(0.02f, 0.15f, 0.05f, 0.9f);
 
         // Game title
         Text title = CreateText("INFINITY RUSH", menuPanel.transform,
@@ -72,15 +80,29 @@ public class MainMenuUI : MonoBehaviour
             new Vector2(0, 135), 16, FontStyle.Italic, new Color(0.7f, 0.8f, 1f));
         sub.GetComponent<RectTransform>().sizeDelta = new Vector2(400, 30);
 
-        // Buttons
-        CreateStyledButton("PLAY", menuPanel.transform, new Vector2(0, 60), OnPlayClicked);
-        CreateStyledButton("SCORES", menuPanel.transform, new Vector2(0, -5), OnScoresClicked);
-        CreateStyledButton("HELP", menuPanel.transform, new Vector2(0, -70), OnHelpClicked);
-        CreateStyledButton("ABOUT", menuPanel.transform, new Vector2(0, -135), OnAboutClicked);
+        string savedName = LeaderboardManager.Instance != null ? LeaderboardManager.Instance.GetSavedPlayerName() : "";
+        if (string.IsNullOrEmpty(savedName)) savedName = "Guest";
 
-        // Bottom text
-        CreateText("Press SPACE or W to start", menuPanel.transform,
-            new Vector2(0, -210), 14, FontStyle.Normal, new Color(1, 1, 1, 0.4f));
+        currentPlayerText = CreateText("Card: " + savedName, menuPanel.transform,
+            new Vector2(0, 100), 18, FontStyle.Normal, Color.white);
+        currentPlayerText.GetComponent<RectTransform>().sizeDelta = new Vector2(500, 30);
+
+        playerNameField = CreateInputField("CardNameField", menuPanel.transform,
+            new Vector2(0, 65), new Vector2(280, 40), "Enter card name...");
+
+        CreateStyledButton("SAVE NAME", menuPanel.transform, new Vector2(0, 15), OnSaveNameClicked);
+
+        CreateText("Tip: Use A / D or Arrow keys + Space. Score 10+ to enter leaderboard.", menuPanel.transform,
+            new Vector2(0, -25), 16, FontStyle.Normal, new Color(0.8f, 0.9f, 1f, 0.9f))
+            .GetComponent<RectTransform>().sizeDelta = new Vector2(520, 35);
+
+        // Buttons
+        CreateStyledButton("PLAY", menuPanel.transform, new Vector2(0, -80), OnPlayClicked);
+        CreateStyledButton("SCORES", menuPanel.transform, new Vector2(0, -145), OnScoresClicked);
+        CreateStyledButton("HELP", menuPanel.transform, new Vector2(0, -210), OnHelpClicked);
+        CreateStyledButton("ABOUT", menuPanel.transform, new Vector2(0, -275), OnAboutClicked);
+
+
     }
 
     // ========== SUB PANELS ==========
@@ -89,7 +111,7 @@ public class MainMenuUI : MonoBehaviour
     {
         helpPanel = CreatePanel("HelpPanel", canvas.transform);
         Image bg = helpPanel.GetComponent<Image>();
-        bg.color = new Color(0.02f, 0.05f, 0.15f, 0.95f);
+        bg.color = new Color(0.02f, 0.15f, 0.05f, 0.95f);
 
         CreateText("HELP", helpPanel.transform, new Vector2(0, 200), 36, FontStyle.Bold, titleColor);
 
@@ -118,7 +140,7 @@ public class MainMenuUI : MonoBehaviour
     {
         scoresPanel = CreatePanel("ScoresPanel", canvas.transform);
         Image bg = scoresPanel.GetComponent<Image>();
-        bg.color = new Color(0.02f, 0.05f, 0.15f, 0.95f);
+        bg.color = new Color(0.02f, 0.15f, 0.05f, 0.95f);
 
         CreateText("HIGH SCORES", scoresPanel.transform, new Vector2(0, 200), 36, FontStyle.Bold, titleColor);
 
@@ -157,7 +179,7 @@ public class MainMenuUI : MonoBehaviour
     {
         aboutPanel = CreatePanel("AboutPanel", canvas.transform);
         Image bg = aboutPanel.GetComponent<Image>();
-        bg.color = new Color(0.02f, 0.05f, 0.15f, 0.95f);
+        bg.color = new Color(0.02f, 0.15f, 0.05f, 0.95f);
 
         CreateText("ABOUT", aboutPanel.transform, new Vector2(0, 200), 36, FontStyle.Bold, titleColor);
 
@@ -184,20 +206,18 @@ public class MainMenuUI : MonoBehaviour
 
     void OnPlayClicked()
     {
+        Debug.Log("PLAY clicked");
+        // Hide the main menu — player now sees the game world and PressKeyToPlay prompt
         menuPanel.SetActive(false);
-        GameManager.StartGame();
-
-        // Also unfreeze player (same as PressKeyToPlay)
+        
+        // Do NOT start the game yet — let PressKeyToPlay handle it when Space is pressed
+        // Just make sure PressKeyToPlay is enabled on the player
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
-            Rigidbody2D rb = playerObj.GetComponent<Rigidbody2D>();
-            if (rb != null)
-                rb.constraints = RigidbodyConstraints2D.FreezeRotation;
-
             PressKeyToPlay pktp = playerObj.GetComponent<PressKeyToPlay>();
             if (pktp != null)
-                pktp.enabled = false;
+                pktp.enabled = true;
         }
     }
 
@@ -260,6 +280,87 @@ public class MainMenuUI : MonoBehaviour
         return text;
     }
 
+    InputField CreateInputField(string name, Transform parent, Vector2 position, Vector2 size, string placeholderText)
+    {
+        GameObject inputObj = new GameObject(name);
+        inputObj.transform.SetParent(parent, false);
+        RectTransform rect = inputObj.AddComponent<RectTransform>();
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+
+        Image bg = inputObj.AddComponent<Image>();
+        bg.color = new Color(0.15f, 0.2f, 0.3f, 1f);
+
+        InputField input = inputObj.AddComponent<InputField>();
+        input.characterLimit = 12;
+
+        GameObject textObj = new GameObject("Text");
+        textObj.transform.SetParent(inputObj.transform, false);
+        RectTransform textRect = textObj.AddComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(10, 0);
+        textRect.offsetMax = new Vector2(-10, 0);
+
+        Text text = textObj.AddComponent<Text>();
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        text.fontSize = 18;
+        text.color = Color.white;
+        text.alignment = TextAnchor.MiddleCenter;
+        input.textComponent = text;
+
+        GameObject placeholderObj = new GameObject("Placeholder");
+        placeholderObj.transform.SetParent(inputObj.transform, false);
+        RectTransform placeholderRect = placeholderObj.AddComponent<RectTransform>();
+        placeholderRect.anchorMin = Vector2.zero;
+        placeholderRect.anchorMax = Vector2.one;
+        placeholderRect.offsetMin = new Vector2(10, 0);
+        placeholderRect.offsetMax = new Vector2(-10, 0);
+
+        Text placeholder = placeholderObj.AddComponent<Text>();
+        placeholder.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        placeholder.fontSize = 18;
+        placeholder.fontStyle = FontStyle.Italic;
+        placeholder.color = new Color(1f, 1f, 1f, 0.4f);
+        placeholder.text = placeholderText;
+        placeholder.alignment = TextAnchor.MiddleCenter;
+        input.placeholder = placeholder;
+
+        return input;
+    }
+
+    void OnSaveNameClicked()
+    {
+        if (playerNameField == null) return;
+        string newName = playerNameField.text.Trim();
+        if (string.IsNullOrEmpty(newName)) return;
+        if (newName.Length > 12) newName = newName.Substring(0, 12);
+
+        if (LeaderboardManager.Instance != null)
+            LeaderboardManager.Instance.SetCurrentPlayer(newName);
+
+        UpdateCurrentPlayerDisplay();
+        playerNameField.text = string.Empty;
+    }
+
+    void UpdateCurrentPlayerDisplay()
+    {
+        if (currentPlayerText == null) return;
+        string savedName = LeaderboardManager.Instance != null ? LeaderboardManager.Instance.GetSavedPlayerName() : "Guest";
+        if (string.IsNullOrEmpty(savedName)) savedName = "Guest";
+        currentPlayerText.text = "Card: " + savedName;
+    }
+
+    void EnsureEventSystem()
+    {
+        if (FindAnyObjectByType<EventSystem>() == null)
+        {
+            GameObject eventSystem = new GameObject("EventSystem");
+            eventSystem.AddComponent<EventSystem>();
+            eventSystem.AddComponent<StandaloneInputModule>();
+        }
+    }
+
     void CreateStyledButton(string label, Transform parent, Vector2 position, UnityEngine.Events.UnityAction onClick)
     {
         // Outer glow/border (light blue offset)
@@ -270,7 +371,7 @@ public class MainMenuUI : MonoBehaviour
         glowRect.sizeDelta = new Vector2(260, 50);
         glowRect.localRotation = Quaternion.Euler(0, 0, -2f);
         Image glowImg = glowObj.AddComponent<Image>();
-        glowImg.color = new Color(0.2f, 0.6f, 0.9f, 0.6f);
+        glowImg.color = new Color(0.3f, 0.8f, 0.4f, 0.6f);
 
         // Main button background
         GameObject btnObj = new GameObject("Button_" + label);
@@ -289,7 +390,7 @@ public class MainMenuUI : MonoBehaviour
         ColorBlock colors = btn.colors;
         colors.normalColor = buttonColor;
         colors.highlightedColor = buttonHighlight;
-        colors.pressedColor = new Color(0.02f, 0.15f, 0.4f, 1f);
+        colors.pressedColor = new Color(0.05f, 0.3f, 0.1f, 1f);
         colors.selectedColor = buttonHighlight;
         btn.colors = colors;
         btn.targetGraphic = btnBg;
@@ -317,6 +418,7 @@ public class MainMenuUI : MonoBehaviour
 
     public void ShowMenu()
     {
+        UpdateCurrentPlayerDisplay();
         if (menuPanel != null)
             menuPanel.SetActive(true);
     }

@@ -20,7 +20,11 @@ public class ActualScoreDisplay : MonoBehaviour
         maxAltura = 0;
         CurrentScore = 0;
         text = GetComponent<Text>();
-        player = GameObject.FindGameObjectWithTag("Player").transform;
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null)
+            player = playerObj.transform;
+        else
+            player = null;
     }
     void Update()
     {

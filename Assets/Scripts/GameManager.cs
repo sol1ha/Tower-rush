@@ -17,7 +17,7 @@ public class GameManager : MonoBehaviour
 
     public static bool Playing()
     {
-        return instance.play;
+        return instance != null && instance.play;
     }
     public static void StartGame()
     {

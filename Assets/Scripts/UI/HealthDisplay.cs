@@ -8,9 +8,7 @@ using UnityEngine;
 /// </summary>
 public class HealthDisplay : MonoBehaviour
 {
-    public GameObject corazon1;
-    public GameObject corazon2;
-    public GameObject corazon3;
+    public List<GameObject> fullHearts;
 
     [Header("Half Heart (optional)")]
     public GameObject halfHeart;
@@ -28,25 +26,32 @@ public class HealthDisplay : MonoBehaviour
     void Update()
     {
         float health = playerHealth.GetHealthFloat();
+        int maxHealth = playerHealth.maxHealth;
+
+        // Ensure we don't exceed the number of heart objects
+        int heartsToShow = Mathf.Min(maxHealth, fullHearts.Count);
 
         // Full hearts
-        corazon1.SetActive(health >= 1f);
-        corazon2.SetActive(health >= 2f);
-        corazon3.SetActive(health >= 3f);
+        for (int i = 0; i < fullHearts.Count; i++)
+        {
+            if (fullHearts[i] != null)
+                fullHearts[i].SetActive(health >= i + 1);
+        }
 
-        // Show half heart when health is 0.5, 1.5, or 2.5
+        // Show half heart when health has a fractional part >= 0.4
         if (halfHeart != null)
         {
-            bool showHalf = (health % 1f) >= 0.4f;
+            bool showHalf = (health % 1f) >= 0.4f && health < maxHealth;
             halfHeart.SetActive(showHalf);
 
             // Position the half heart next to the last full heart
             if (showHalf)
             {
                 int fullCount = Mathf.FloorToInt(health);
-                GameObject lastHeart = fullCount >= 2 ? corazon3 :
-                                       fullCount >= 1 ? corazon2 : corazon1;
-                halfHeart.transform.position = lastHeart.transform.position;
+                if (fullCount < fullHearts.Count && fullHearts[fullCount] != null)
+                {
+                    halfHeart.transform.position = fullHearts[fullCount].transform.position;
+                }
             }
         }
     }

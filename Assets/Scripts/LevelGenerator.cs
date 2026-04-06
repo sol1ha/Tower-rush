@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,6 +12,7 @@ public class LevelGenerator : MonoBehaviour
 
     public GeneratorMode generatorMode;
     public GameObject platformPrefab;
+    public GameObject spikedPlatformPrefab;
     public GameObject boostPrefab;
     public GameObject coinPrefab;
     public GameObject spikePrefab;
@@ -43,124 +44,58 @@ public class LevelGenerator : MonoBehaviour
 
     private Transform player;
     Vector2 lastPosition = new Vector2(0, 0);
-    private bool playerOnBoost = false;
     private Vector3 lastSimplePos = Vector3.zero;
     private int platformCount = 0;
-    private int platformsSinceLastSpike = 99import pygame
-import sys
-import math
+    private int platformsSinceLastSpike = 999; // Start high so first spikes can spawn
 
-pygame.init()
-
-# Oyna
-WIDTH, HEIGHT = 800, 500
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Futbol o'yini ⚽")
-
-clock = pygame.time.Clock()
-
-# Ranglar
-WHITE = (255, 255, 255)
-GREEN = (0, 150, 0)
-RED = (255, 0, 0)
-
-# Player
-player = pygame.Rect(100, 200, 40, 40)
-player_speed = 5
-
-# Ball
-ball_pos = [400, 250]
-ball_vel = [0, 0]
-ball_radius = 15
-
-# Goal
-goal = pygame.Rect(750, 180, 50, 140)
-
-score = 0
-font = pygame.font.SysFont(None, 36)
-
-running = True
-while running:
-    clock.tick(60)
-    screen.fill(GREEN)
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    # Harakat
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT]:
-        player.x -= player_speed
-    if keys[pygame.K_RIGHT]:
-        player.x += player_speed
-    if keys[pygame.K_UP]:
-        player.y -= player_speed
-    if keys[pygame.K_DOWN]:
-        player.y += player_speed
-
-    # Ball fizikasi
-    ball_pos[0] += ball_vel[0]
-    ball_pos[1] += ball_vel[1]
-
-    ball_vel[0] *= 0.98
-    ball_vel[1] *= 0.98
-
-    # Devorga urilish
-    if ball_pos[1] <= 0 or ball_pos[1] >= HEIGHT:
-        ball_vel[1] *= -0.8
-
-    if ball_pos[0] <= 0 or ball_pos[0] >= WIDTH:
-        ball_vel[0] *= -0.8
-
-    # Tepish (kick)
-    dist = math.hypot(player.centerx - ball_pos[0], player.centery - ball_pos[1])
-    if dist < 50:
-        if keys[pygame.K_SPACE]:
-            dx = ball_pos[0] - player.centerx
-            dy = ball_pos[1] - player.centery
-            ball_vel[0] = dx * 0.2
-            ball_vel[1] = dy * 0.2
-
-    # Gol
-    if goal.collidepoint(ball_pos[0], ball_pos[1]):
-        score += 1
-        ball_pos = [400, 250]
-        ball_vel = [0, 0]
-
-    # Chizish
-    pygame.draw.rect(screen, WHITE, player)
-    pygame.draw.circle(screen, WHITE, (int(ball_pos[0]), int(ball_pos[1])), ball_radius)
-    pygame.draw.rect(screen, RED, goal)
-
-    score_text = font.render(f"Score: {score}", True, WHITE)
-    screen.blit(score_text, (10, 10))
-
-    pygame.display.flip()
-
-pygame.quit()
-sys.exit()9; // Start high so first spikes can spawn
 
     void Start()
     {
+        // Always spawn a starter platform above y=1 so all generated platforms stay above the target height
+        Vector3 startPlatformPos = new Vector3(0f, 1f, 0f);
+        Instantiate(platformPrefab, startPlatformPos, Quaternion.identity);
+        platformCount = 1;
+        lastPosition = new Vector2(startPlatformPos.x, startPlatformPos.y);
+        lastSimplePos = startPlatformPos;
+
         if(generatorMode == GeneratorMode.Simple)
         {
             boostCounter = 0;
-            Vector3 spawnPosition = new Vector3();
+            
+            Vector3 spawnPosition = Vector3.zero;
+            
             for (int i = 0; i < numberOfPlatforms; i++)
             {
                 spawnPosition.y += Random.Range(minY, maxY);
                 spawnPosition.x = (Random.Range(-spawnPosition.x, spawnPosition.x) * 0.5f + Random.Range(-levelWidth, levelWidth) * 1.5f) / 2;
                 boostCounter++;
+                coinCounter++;
                 if (boostCounter % boostEach == 0)
                 {
                     Instantiate(boostPrefab, spawnPosition, Quaternion.identity);
                 }
                 else
                 {
-                    GameObject platform = Instantiate(platformPrefab, spawnPosition, Quaternion.identity);
-                    platformCount++;
-                    TrySpawnSpikes(platform, spawnPosition, lastSimplePos, platformCount);
+                    bool rollResult = RollForSpikes(spawnPosition, lastSimplePos, platformCount + 1);
+                    bool isCoin = coinCounter % coinEach == 0;
+
+                    if (isCoin)
+                    {
+                        Instantiate(platformPrefab, spawnPosition, Quaternion.identity);
+                        platformCount++;
+                        Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity);
+                    }
+                    else if (rollResult && spikedPlatformPrefab != null)
+                    {
+                        Instantiate(spikedPlatformPrefab, spawnPosition, Quaternion.identity);
+                        platformCount++;
+                    }
+                    else
+                    {
+                        GameObject platform = Instantiate(platformPrefab, spawnPosition, Quaternion.identity);
+                        platformCount++;
+                        if (rollResult) TrySpawnSpikes(platform, spawnPosition, lastSimplePos);
+                    }
                     lastSimplePos = spawnPosition;
                 }
 
@@ -189,30 +124,40 @@ sys.exit()9; // Start high so first spikes can spawn
                 }
                 else
                 {
-                    GameObject platform = Instantiate(platformPrefab, spawnPosition, Quaternion.identity);
-                    platformCount++;
-                    TrySpawnSpikes(platform, spawnPosition, lastPosition, platformCount);
-                }
+                    bool rollResult = RollForSpikes(spawnPosition, lastPosition, platformCount + 1);
+                    bool isCoin = coinCounter % coinEach == 0;
 
-                if(coinCounter % coinEach == 0)
-                {
-                    Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity);
+                    if (isCoin)
+                    {
+                        Instantiate(platformPrefab, spawnPosition, Quaternion.identity);
+                        platformCount++;
+                        Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity);
+                    }
+                    else if (rollResult && spikedPlatformPrefab != null)
+                    {
+                        Instantiate(spikedPlatformPrefab, spawnPosition, Quaternion.identity);
+                        platformCount++;
+                    }
+                    else
+                    {
+                        GameObject platform = Instantiate(platformPrefab, spawnPosition, Quaternion.identity);
+                        platformCount++;
+                        if (rollResult) TrySpawnSpikes(platform, spawnPosition, lastPosition);
+                    }
                 }
                 lastPosition = spawnPosition;
             }
         }
     }
 
-    void TrySpawnSpikes(GameObject platform, Vector3 platformPos, Vector2 previousPos, int platformIndex)
+    bool RollForSpikes(Vector3 platformPos, Vector2 previousPos, int platformIndex)
     {
-        if (spikePrefab == null) return;
-
         // Platforms 1-8 are safe — no spikes
-        if (platformIndex <= spikeStartPlatform) return;
+        if (platformIndex <= spikeStartPlatform) return false;
 
         // Must have at least 2 safe platforms between spiked ones
         platformsSinceLastSpike++;
-        if (platformsSinceLastSpike <= safePlatformsBetweenSpikes) return;
+        if (platformsSinceLastSpike <= safePlatformsBetweenSpikes) return false;
 
         // Calculate difficulty-scaled spike chance
         float currentChance = Mathf.Min(spikeChance + (platformPos.y / 100f) * spikeDifficultyScale, maxSpikeChance);
@@ -224,10 +169,16 @@ sys.exit()9; // Start high so first spikes can spawn
             currentChance *= 0.2f; // 80% reduction
         }
 
-        if (Random.value > currentChance) return;
+        if (Random.value > currentChance) return false;
 
         // Reset cooldown — next 2 platforms will be safe
         platformsSinceLastSpike = 0;
+        return true;
+    }
+
+    void TrySpawnSpikes(GameObject platform, Vector3 platformPos, Vector2 previousPos)
+    {
+        if (spikePrefab == null) return;
 
         // Spawn 2 or 3 spikes, spread evenly across the platform
         int spikeCount = Random.Range(2, 4); // 2 or 3
