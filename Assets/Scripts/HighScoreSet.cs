@@ -17,7 +17,9 @@ public class HighScoreSet : MonoBehaviour
 
     void Start()
     {
+        // Reset session coins every time a new game/scene starts
         gameScore = 0;
+        
         if (!PlayerPrefs.HasKey(Constants.HighScore_Pref))
         {
             PlayerPrefs.SetInt(Constants.HighScore_Pref, 0);
@@ -40,8 +42,11 @@ public class HighScoreSet : MonoBehaviour
     /// </summary>
     public static void FinalizeSessionCoins()
     {
-        PersistentCoins += gameScore * 2;
-        Debug.Log($"Session coins: {gameScore}. Added (doubled): {gameScore * 2}. New Total: {PersistentCoins}");
-        // We don't reset gameScore here as it will be reset on Start() of next round
+        // Add collected coins 1-to-1 to persistent total
+        PersistentCoins += gameScore;
+        Debug.Log($"Session coins: {gameScore}. Added to total. New Total: {PersistentCoins}");
+        
+        // Reset after finalizing so it doesn't double-add if called multiple times
+        gameScore = 0;
     }
 }

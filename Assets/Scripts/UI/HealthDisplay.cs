@@ -8,51 +8,40 @@ using UnityEngine;
 /// </summary>
 public class HealthDisplay : MonoBehaviour
 {
-    public List<GameObject> fullHearts;
-
-    [Header("Half Heart (optional)")]
-    public GameObject halfHeart;
-
-    private PlayerHealth playerHealth;
+    private GameObject heart1;
+    private GameObject heart2;
+    private GameObject heart3;
 
     void Start()
     {
-        playerHealth = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerHealth>();
+        // Finds exactly the 3 items by deep global search, ignoring where this script is attached
+        GameObject healthContainer = GameObject.Find("HealthDisplay");
+        if (healthContainer != null) 
+        {
+            if (healthContainer.transform.Find("lives") != null) heart1 = healthContainer.transform.Find("lives").gameObject;
+            if (healthContainer.transform.Find("lives2") != null) heart2 = healthContainer.transform.Find("lives2").gameObject;
+            if (healthContainer.transform.Find("lives3") != null) heart3 = healthContainer.transform.Find("lives3").gameObject;
+        }
 
-        if (halfHeart != null)
-            halfHeart.SetActive(false);
+        // Fallbacks in case names are different
+        if (heart1 == null) heart1 = GameObject.Find("lives");
+        if (heart2 == null) heart2 = GameObject.Find("lives2");
+        if (heart3 == null) heart3 = GameObject.Find("lives3");
     }
 
     void Update()
     {
-        float health = playerHealth.GetHealthFloat();
-        int maxHealth = playerHealth.maxHealth;
+        if (PlayerHealth.Instance == null) return;
 
-        // Ensure we don't exceed the number of heart objects
-        int heartsToShow = Mathf.Min(maxHealth, fullHearts.Count);
+        int currentHealth = Mathf.CeilToInt(PlayerHealth.Instance.GetHealthFloat());
 
-        // Full hearts
-        for (int i = 0; i < fullHearts.Count; i++)
-        {
-            if (fullHearts[i] != null)
-                fullHearts[i].SetActive(health >= i + 1);
-        }
-
-        // Show half heart when health has a fractional part >= 0.4
-        if (halfHeart != null)
-        {
-            bool showHalf = (health % 1f) >= 0.4f && health < maxHealth;
-            halfHeart.SetActive(showHalf);
-
-            // Position the half heart next to the last full heart
-            if (showHalf)
-            {
-                int fullCount = Mathf.FloorToInt(health);
-                if (fullCount < fullHearts.Count && fullHearts[fullCount] != null)
-                {
-                    halfHeart.transform.position = fullHearts[fullCount].transform.position;
-                }
-            }
-        }
+        // Heart 1 stays on if health is 1, 2, or 3
+        if (heart1 != null) heart1.SetActive(currentHealth >= 1);
+        
+        // Heart 2 stays on if health is 2 or 3
+        if (heart2 != null) heart2.SetActive(currentHealth >= 2);
+        
+        // Heart 3 stays on ONLY if health is 3
+        if (heart3 != null) heart3.SetActive(currentHealth >= 3);
     }
 }

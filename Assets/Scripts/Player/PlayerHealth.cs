@@ -17,8 +17,11 @@ public class PlayerHealth : MonoBehaviour
     public TextMeshProUGUI damagePopupText;
 
     private float health;
-    private float invincibleTime = 1.5f;
+    private float invincibleTime = 1.0f;
     private float lastHitTime = -999f;
+    private int lastHitPlatformId = -1;
+
+    public static PlayerHealth Instance;
 
     public ParticleSystem bloodHitPS;
     public BoxCollider2D extraCollider;
@@ -32,6 +35,7 @@ public class PlayerHealth : MonoBehaviour
 
     private void Awake()
     {
+        Instance = this;
         health = maxHealth;
         originalSprite = GetComponent<SpriteRenderer>().sprite;
     }
@@ -49,10 +53,18 @@ public class PlayerHealth : MonoBehaviour
 
     private void Update()
     {
+        if (shieldVisual == null) return;
+
         if (HasShield)
+        {
             shieldVisual.enabled = true;
+        }
         else
-            shieldVisual.enabled = false;
+        {
+            // Only disable if it's NOT the player's main renderer
+            if (shieldVisual.gameObject != gameObject)
+                shieldVisual.enabled = false;
+        }
     }
 
     private void PlayerKillLimit_PlayerKill(object sender, System.EventArgs e)
@@ -71,14 +83,19 @@ public class PlayerHealth : MonoBehaviour
     }
 
     /// <summary>
-    /// Called by spikes. Only damages if player has landed (not jumping up).
-    /// All spikes on one platform = 1 life thanks to invincibility frames.
-    /// Last heart takes 0.5 damage instead of 1.
+    /// Called by spikes. Passes the parent platform's ID to prevent multiple spike hits
+    /// on the same platform from draining all lives instantly.
     /// </summary>
-    public void DamagePlayer(int amount)
+    public void DamagePlayer(int amount, int sourcePlatformId = -1)
     {
-        // Invincibility frames — all spikes on same platform = 1 hit
-        if (Time.time - lastHitTime < invincibleTime) return;
+        // If we hit the EXACT SAME platform as the last hit, ignore it.
+        // This ensures one platform (regardless of spike count) only ever takes 1 life.
+        if (sourcePlatformId != -1 && sourcePlatformId == lastHitPlatformId) 
+        {
+            return;
+        }
+        
+        lastHitPlatformId = sourcePlatformId;
         lastHitTime = Time.time;
 
         if (HasShield)
@@ -89,12 +106,11 @@ public class PlayerHealth : MonoBehaviour
 
         bloodHitPS.Play(false);
 
-        // Half heart on last life
-        float actualDamage = health <= 1f ? 0.5f : (float)amount;
-        health -= actualDamage;
+        // Deduct 1 heart per hit
+        health -= amount;
 
         // Show floating damage text
-        ShowDamagePopup(actualDamage);
+        ShowDamagePopup(amount);
 
         if (health <= 0f)
         {
@@ -105,12 +121,10 @@ public class PlayerHealth : MonoBehaviour
     /// <summary>
     /// Called by spikes — only damages if player is falling or standing (not jumping up).
     /// </summary>
-    public void DamagePlayerIfLanded(int amount, Rigidbody2D playerRb)
+    public void DamagePlayerIfLanded(int amount, Rigidbody2D playerRb, int sourcePlatformId = -1)
     {
-        // If moving upward fast, player is jumping through — no damage
         if (playerRb != null && playerRb.linearVelocity.y > 1f) return;
-
-        DamagePlayer(amount);
+        DamagePlayer(amount, sourcePlatformId);
     }
 
     void ShowDamagePopup(float damage)

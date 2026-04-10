@@ -12,8 +12,6 @@ public class PressKeyToPlay : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-        // Stay disabled until the player clicks the PLAY button in the main menu
-        this.enabled = false;
     }
     void Update()
     {

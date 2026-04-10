@@ -43,11 +43,13 @@ public class PlayerJetpack : MonoBehaviour
 
         if (hasJetpack || player.IsJetpacking)
         {
-            jetpackVisual.enabled = true;
+            if (jetpackVisual != null) jetpackVisual.enabled = true;
         }
         else
         {
-            jetpackVisual.enabled = false;
+            // Only disable if it's NOT the player's main renderer
+            if (jetpackVisual != null && jetpackVisual.gameObject != player.gameObject) 
+                jetpackVisual.enabled = false;
         }
 
         if (hasJetpack && Keyboard.current != null && (Keyboard.current.wKey.wasPressedThisFrame || Keyboard.current.spaceKey.wasPressedThisFrame))

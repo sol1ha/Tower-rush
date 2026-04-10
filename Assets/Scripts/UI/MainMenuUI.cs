@@ -26,9 +26,7 @@ public class MainMenuUI : MonoBehaviour
     public Color textColor = Color.white;
 
     private GameObject menuPanel;
-    private GameObject helpPanel;
-    private GameObject scoresPanel;
-    private GameObject aboutPanel;
+
     private Text currentPlayerText;
     private InputField playerNameField;
 
@@ -40,17 +38,7 @@ public class MainMenuUI : MonoBehaviour
 
     void Start()
     {
-        if (canvas == null)
-            canvas = FindAnyObjectByType<Canvas>();
-
-        Debug.Log("Canvas found: " + (canvas != null));
-
-        EnsureEventSystem();
-
-        BuildMainMenu();
-        BuildHelpPanel();
-        BuildScoresPanel();
-        BuildAboutPanel();
+        // Menu completely removed as requested
     }
 
     void Update()
@@ -98,109 +86,11 @@ public class MainMenuUI : MonoBehaviour
 
         // Buttons
         CreateStyledButton("PLAY", menuPanel.transform, new Vector2(0, -80), OnPlayClicked);
-        CreateStyledButton("SCORES", menuPanel.transform, new Vector2(0, -145), OnScoresClicked);
-        CreateStyledButton("HELP", menuPanel.transform, new Vector2(0, -210), OnHelpClicked);
-        CreateStyledButton("ABOUT", menuPanel.transform, new Vector2(0, -275), OnAboutClicked);
 
 
     }
 
-    // ========== SUB PANELS ==========
 
-    void BuildHelpPanel()
-    {
-        helpPanel = CreatePanel("HelpPanel", canvas.transform);
-        Image bg = helpPanel.GetComponent<Image>();
-        bg.color = new Color(0.02f, 0.15f, 0.05f, 0.95f);
-
-        CreateText("HELP", helpPanel.transform, new Vector2(0, 200), 36, FontStyle.Bold, titleColor);
-
-        string[] helpLines = {
-            "W / SPACE  -  Jump",
-            "A / D  -  Move Left / Right",
-            "Collect coins for bonus score",
-            "Avoid spikes! They cost you a life",
-            "The floor is rising - keep climbing!",
-            "Grab the jetpack for a boost!",
-            "Score 10+ to enter the leaderboard"
-        };
-
-        for (int i = 0; i < helpLines.Length; i++)
-        {
-            Text t = CreateText(helpLines[i], helpPanel.transform,
-                new Vector2(0, 130 - i * 40), 18, FontStyle.Normal, Color.white);
-            t.GetComponent<RectTransform>().sizeDelta = new Vector2(500, 35);
-        }
-
-        CreateStyledButton("BACK", helpPanel.transform, new Vector2(0, -200), OnBackClicked);
-        helpPanel.SetActive(false);
-    }
-
-    void BuildScoresPanel()
-    {
-        scoresPanel = CreatePanel("ScoresPanel", canvas.transform);
-        Image bg = scoresPanel.GetComponent<Image>();
-        bg.color = new Color(0.02f, 0.15f, 0.05f, 0.95f);
-
-        CreateText("HIGH SCORES", scoresPanel.transform, new Vector2(0, 200), 36, FontStyle.Bold, titleColor);
-
-        // Show high score
-        int highScore = PlayerPrefs.GetInt(Constants.HighScore_Pref, 0);
-        CreateText("Your Best: " + highScore, scoresPanel.transform,
-            new Vector2(0, 130), 24, FontStyle.Normal, Color.white);
-
-        // Show top scores from leaderboard if available
-        if (LeaderboardManager.Instance != null)
-        {
-            var entries = LeaderboardManager.Instance.GetEntries();
-            for (int i = 0; i < Mathf.Min(entries.Count, 5); i++)
-            {
-                string medal = i < 3 ? new string[] { "1st", "2nd", "3rd" }[i] : (i + 1).ToString();
-                string row = medal + "   " + entries[i].playerName + "   " + entries[i].score;
-                Color rowColor = i == 0 ? new Color(1f, 0.84f, 0f) :
-                                 i == 1 ? new Color(0.75f, 0.75f, 0.75f) :
-                                 i == 2 ? new Color(0.8f, 0.5f, 0.2f) : Color.white;
-                Text t = CreateText(row, scoresPanel.transform,
-                    new Vector2(0, 70 - i * 40), 20, FontStyle.Normal, rowColor);
-                t.GetComponent<RectTransform>().sizeDelta = new Vector2(400, 35);
-            }
-        }
-        else
-        {
-            CreateText("Play to set scores!", scoresPanel.transform,
-                new Vector2(0, 50), 20, FontStyle.Italic, new Color(1, 1, 1, 0.5f));
-        }
-
-        CreateStyledButton("BACK", scoresPanel.transform, new Vector2(0, -200), OnBackClicked);
-        scoresPanel.SetActive(false);
-    }
-
-    void BuildAboutPanel()
-    {
-        aboutPanel = CreatePanel("AboutPanel", canvas.transform);
-        Image bg = aboutPanel.GetComponent<Image>();
-        bg.color = new Color(0.02f, 0.15f, 0.05f, 0.95f);
-
-        CreateText("ABOUT", aboutPanel.transform, new Vector2(0, 200), 36, FontStyle.Bold, titleColor);
-
-        string[] aboutLines = {
-            "INFINITY RUSH",
-            "",
-            "An endless climbing game",
-            "Jump higher, score more!",
-            "",
-            "Made by Soliha"
-        };
-
-        for (int i = 0; i < aboutLines.Length; i++)
-        {
-            CreateText(aboutLines[i], aboutPanel.transform,
-                new Vector2(0, 120 - i * 40), 20, FontStyle.Normal, Color.white);
-        }
-
-        CreateStyledButton("BACK", aboutPanel.transform, new Vector2(0, -200), OnBackClicked);
-        aboutPanel.SetActive(false);
-    }
 
     // ========== BUTTON CALLBACKS ==========
 
@@ -219,32 +109,6 @@ public class MainMenuUI : MonoBehaviour
             if (pktp != null)
                 pktp.enabled = true;
         }
-    }
-
-    void OnScoresClicked()
-    {
-        menuPanel.SetActive(false);
-        scoresPanel.SetActive(true);
-    }
-
-    void OnHelpClicked()
-    {
-        menuPanel.SetActive(false);
-        helpPanel.SetActive(true);
-    }
-
-    void OnAboutClicked()
-    {
-        menuPanel.SetActive(false);
-        aboutPanel.SetActive(true);
-    }
-
-    void OnBackClicked()
-    {
-        helpPanel.SetActive(false);
-        scoresPanel.SetActive(false);
-        aboutPanel.SetActive(false);
-        menuPanel.SetActive(true);
     }
 
     // ========== UI BUILDERS ==========
@@ -357,7 +221,7 @@ public class MainMenuUI : MonoBehaviour
         {
             GameObject eventSystem = new GameObject("EventSystem");
             eventSystem.AddComponent<EventSystem>();
-            eventSystem.AddComponent<StandaloneInputModule>();
+            eventSystem.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
         }
     }
 

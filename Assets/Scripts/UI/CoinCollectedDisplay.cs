@@ -11,22 +11,44 @@ public class CoinCollectedDisplay : MonoBehaviour
 
     void Start()
     {
-        text = GetComponent<Text>();
+        // First look for the specifically named text object in children
+        Transform t = transform.Find("coinAmountTxt");
+        if (t != null)
+        {
+            text = t.GetComponent<Text>();
+        }
+        
+        // Fallback to getting any text component on this object
         if (text == null)
         {
-            Debug.LogError("CoinCollectedDisplay: No Text component found on this GameObject. Please attach this script to a UI Text element.");
-            enabled = false;
-            return;
+            text = GetComponent<Text>();
         }
-        Debug.Log("CoinCollectedDisplay initialized on: " + gameObject.name);
+
+        if (text == null)
+        {
+            Debug.LogError("CoinCollectedDisplay: No Text component found. Please ensure 'coinAmountTxt' is a child or this object has a Text component.");
+        }
+        else
+        {
+            // Initially show the permanent total coins (Home Page state)
+            text.text = HighScoreSet.PersistentCoins.ToString();
+        }
     }
 
     void Update()
     {
         if (text != null)
         {
-            int coins = HighScoreSet.gameScore;
-            text.text = "Coins: " + coins;
+            if (GameManager.Playing())
+            {
+                // During gameplay, show only what was collected this session
+                text.text = HighScoreSet.gameScore.ToString();
+            }
+            else
+            {
+                // On the home screen / menu, show the total saved amount
+                text.text = HighScoreSet.PersistentCoins.ToString();
+            }
         }
     }
 }

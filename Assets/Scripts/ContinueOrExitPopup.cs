@@ -45,7 +45,7 @@ public class ContinueOrExitPopup : MonoBehaviour
         {
             GameObject eventSystem = new GameObject("EventSystem");
             eventSystem.AddComponent<EventSystem>();
-            eventSystem.AddComponent<StandaloneInputModule>();
+            eventSystem.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
         }
     }
 

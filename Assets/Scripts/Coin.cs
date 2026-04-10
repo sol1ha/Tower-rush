@@ -21,10 +21,10 @@ public class Coin : MonoBehaviour
     {
         if(active && collision.tag == "Player")
         {
-            Debug.Log("Coin collected! Score increased by 5. New score: " + (HighScoreSet.gameScore + 5));
+            Debug.Log("Coin collected! Score increased by 1. New score: " + (HighScoreSet.gameScore + 1));
             active = false;
             this.enabled = false;
-            HighScoreSet.gameScore += 5;
+            HighScoreSet.gameScore += 1;
             Destroy(gameObject,1);
             spriteRenderer.enabled = false;
             audioSource.Play();

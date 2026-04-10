@@ -17,25 +17,36 @@ public class spikes : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D playerCollider)
     {
+        TryDamage(playerCollider);
+    }
+
+    private void OnTriggerStay2D(Collider2D playerCollider)
+    {
+        TryDamage(playerCollider);
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        TryDamage(collision.collider);
+    }
+
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        TryDamage(collision.collider);
+    }
+
+    private void TryDamage(Collider2D playerCollider)
+    {
         if (!playerCollider.CompareTag("Player")) return;
 
-        Rigidbody2D rb = playerCollider.GetComponent<Rigidbody2D>();
         PlayerHealth health = playerCollider.GetComponent<PlayerHealth>();
-
         if (health == null || spikeCollider == null) return;
 
-        // Check if player is landing on TOP of the spike
-        // Player's bottom edge must be above spike's top edge
-        float playerBottom = playerCollider.bounds.min.y;
-        float spikeTop = spikeCollider.bounds.max.y;
+        Rigidbody2D rb = playerCollider.GetComponent<Rigidbody2D>();
 
-        // If player's bottom is above spike's top and falling, they landed on the spike
-        bool isOnTopOfSpike = playerBottom >= spikeTop - 0.1f;
-        bool isFalling = rb == null || rb.linearVelocity.y <= 0.1f;
+        // Get the ID of the platform we are attached to (if any) or our own ID
+        int platformId = transform.parent != null ? transform.parent.gameObject.GetHashCode() : gameObject.GetHashCode();
 
-        if (isOnTopOfSpike && isFalling)
-        {
-            health.DamagePlayer(damage);
-        }
+        health.DamagePlayerIfLanded(damage, rb, platformId);
     }
 }
