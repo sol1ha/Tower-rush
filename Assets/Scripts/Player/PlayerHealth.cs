@@ -17,8 +17,7 @@ public class PlayerHealth : MonoBehaviour
     public TextMeshProUGUI damagePopupText;
 
     private float health;
-    private float invincibleTime = 1.0f;
-    private float lastHitTime = -999f;
+    private bool isInvincible = false;
     private int lastHitPlatformId = -1;
 
     public static PlayerHealth Instance;
@@ -94,28 +93,40 @@ public class PlayerHealth : MonoBehaviour
         {
             return;
         }
+
+        // Standard user-requested cooldown
+        if (isInvincible) 
+        {
+            return;
+        }
         
         lastHitPlatformId = sourcePlatformId;
-        lastHitTime = Time.time;
+        StartCoroutine(TakeDamageRoutine(amount));
+    }
+
+    IEnumerator TakeDamageRoutine(int amount)
+    {
+        isInvincible = true;
 
         if (HasShield)
         {
             HasShield = false;
-            return;
         }
-
-        bloodHitPS.Play(false);
-
-        // Deduct 1 heart per hit
-        health -= amount;
-
-        // Show floating damage text
-        ShowDamagePopup(amount);
-
-        if (health <= 0f)
+        else
         {
-            PlayerKillLimit.TriggerEventStatic();
+            bloodHitPS.Play(false);
+            health -= amount;
+            ShowDamagePopup(amount);
+            if (DamageVignette.Instance != null) DamageVignette.Instance.PlayHit();
+
+            if (health <= 0f)
+            {
+                PlayerKillLimit.TriggerEventStatic();
+            }
         }
+
+        yield return new WaitForSeconds(1f); // 1 second protection
+        isInvincible = false;
     }
 
     /// <summary>
@@ -175,11 +186,16 @@ public class PlayerHealth : MonoBehaviour
         if (GameManager.instance != null)
             GameManager.instance.play = false;
 
-        audioSource.Play();
         PlayerKillLimit.PlayerKill -= PlayerKillLimit_PlayerKill;
-        GetComponent<SpriteRenderer>().sprite = deathSprite;
-        playerCollider.enabled = false;
-        extraCollider.enabled = false;
+
+        if (audioSource != null) audioSource.Play();
+
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null && deathSprite != null) sr.sprite = deathSprite;
+
+        if (playerCollider != null) playerCollider.enabled = false;
+        if (extraCollider != null) extraCollider.enabled = false;
+
         recordHeight = (int)transform.position.y;
         HighScoreSet.SetHighscore(recordHeight + HighScoreSet.gameScore);
     }
@@ -198,10 +214,17 @@ public class PlayerHealth : MonoBehaviour
         if (rb != null) rb.linearVelocity = Vector2.zero;
         
         // Reset invulnerability frames
-        lastHitTime = Time.time + 1.5f; 
+        StartCoroutine(SpawnInvincibility()); 
         
         // Clear kill flag and resubscribe
         PlayerKillLimit.triggerEvent = false;
         PlayerKillLimit.PlayerKill += PlayerKillLimit_PlayerKill;
+    }
+
+    IEnumerator SpawnInvincibility()
+    {
+        isInvincible = true;
+        yield return new WaitForSeconds(1.5f);
+        isInvincible = false;
     }
 }

@@ -25,6 +25,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2603130407593912519, guid: bc002a48f603f5141bcd078843b2d1d2,
         type: 3}
+      propertyPath: m_Icon
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 2603130407593912519, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
       propertyPath: m_Name
       value: platform Boost
       objectReference: {fileID: 0}
@@ -46,7 +51,7 @@ PrefabInstance:
     - target: {fileID: 3736421190891318409, guid: bc002a48f603f5141bcd078843b2d1d2,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -5.55
       objectReference: {fileID: 0}
     - target: {fileID: 3736421190891318409, guid: bc002a48f603f5141bcd078843b2d1d2,
         type: 3}
@@ -93,6 +98,51 @@ PrefabInstance:
       propertyPath: bulletbounce
       value: 
       objectReference: {fileID: 8300000, guid: b2066109eebdc76469efc3ff3c88682c, type: 3}
+    - target: {fileID: 5117104024900161782, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: isBoostPlatform
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5117104024900161783, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: m_Size.x
+      value: 3.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5117104024900161783, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: m_Size.y
+      value: 1.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 5117104024900161783, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: m_Offset.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5117104024900161783, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: m_Offset.y
+      value: 0.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 5117104024900161783, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: m_SpriteTilingProperty.newSize.x
+      value: 3.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 5117104024900161783, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: m_SpriteTilingProperty.newSize.y
+      value: 3.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 5117104024900161783, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.x
+      value: 4.46
+      objectReference: {fileID: 0}
+    - target: {fileID: 5117104024900161783, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.y
+      value: 3.14
+      objectReference: {fileID: 0}
     - target: {fileID: 5117104024900161784, guid: bc002a48f603f5141bcd078843b2d1d2,
         type: 3}
       propertyPath: m_SurfaceArc
@@ -100,10 +150,25 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8304164641999076878, guid: bc002a48f603f5141bcd078843b2d1d2,
         type: 3}
+      propertyPath: m_Size.x
+      value: 3.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8304164641999076878, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: m_Size.y
+      value: 3.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8304164641999076878, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: 5085518255932541075, guid: ed5fceee999b74d5fa577ea3b7dbf80e,
+      objectReference: {fileID: 7781910319036700392, guid: 3908f0606101e4593a6a03d287cb35a2,
         type: 3}
+    - target: {fileID: 8304164641999076878, guid: bc002a48f603f5141bcd078843b2d1d2,
+        type: 3}
+      propertyPath: m_WasSpriteAssigned
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

@@ -44,7 +44,6 @@ public class ActualScoreDisplay : MonoBehaviour
         if(player.position.y > maxAltura)
         {
             maxAltura = (int)player.position.y;
-            Debug.Log("New Max Height: " + maxAltura);
         }
         
         // Update the score variable regardless of whether the UI text is working

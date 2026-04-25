@@ -10,7 +10,7 @@ public class spikes : MonoBehaviour
     public int damage = 1;
     private Collider2D spikeCollider;
 
-    void Start()
+    void Awake()
     {
         spikeCollider = GetComponent<Collider2D>();
     }
@@ -37,12 +37,12 @@ public class spikes : MonoBehaviour
 
     private void TryDamage(Collider2D playerCollider)
     {
-        if (!playerCollider.CompareTag("Player")) return;
+        if (!playerCollider.CompareTag("Player") && !playerCollider.GetComponentInParent<Player>()) return;
 
-        PlayerHealth health = playerCollider.GetComponent<PlayerHealth>();
+        PlayerHealth health = playerCollider.GetComponentInParent<PlayerHealth>();
         if (health == null || spikeCollider == null) return;
 
-        Rigidbody2D rb = playerCollider.GetComponent<Rigidbody2D>();
+        Rigidbody2D rb = playerCollider.GetComponentInParent<Rigidbody2D>();
 
         // Get the ID of the platform we are attached to (if any) or our own ID
         int platformId = transform.parent != null ? transform.parent.gameObject.GetHashCode() : gameObject.GetHashCode();

@@ -21,7 +21,7 @@ public class GameManager : MonoBehaviour
     }
     public static void StartGame()
     {
-        instance.play = true;
+        if (instance != null) instance.play = true;
     }
 
     public void GameOver()

@@ -1,18 +1,13 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-/// <summary>
-/// Manages leaderboard data. Stores top 10 scores locally using PlayerPrefs.
-/// Only scores >= 10 qualify. Players are remembered by username (like arcade card).
-/// </summary>
 public class LeaderboardManager : MonoBehaviour
 {
     public static LeaderboardManager Instance;
 
-    private const string LEADERBOARD_KEY = "InfinityRush_Leaderboard";
+    private const string LEADERBOARD_KEY = "InfinityRush_Leaderboard_v2";
     private const string CURRENT_PLAYER_KEY = "InfinityRush_CurrentPlayer";
     private const int MAX_ENTRIES = 10;
-    private const int MIN_SCORE_TO_QUALIFY = 10;
 
     public static readonly string[] ProfileIcons = {
         "apple", "cherry", "grape", "lemon", "orange",
@@ -24,24 +19,15 @@ public class LeaderboardManager : MonoBehaviour
     {
         public string playerName;
         public int score;
+        public int coins;
         public string icon;
-        public int stars;
 
-        public LeaderboardEntry(string name, int score, string icon)
+        public LeaderboardEntry(string name, int score, int coins, string icon)
         {
             this.playerName = name;
             this.score = score;
+            this.coins = coins;
             this.icon = icon;
-            this.stars = CalculateStars(score);
-        }
-
-        static int CalculateStars(int score)
-        {
-            if (score >= 500) return 5;
-            if (score >= 300) return 4;
-            if (score >= 200) return 3;
-            if (score >= 150) return 2;
-            return 1;
         }
     }
 
@@ -68,7 +54,6 @@ public class LeaderboardManager : MonoBehaviour
 
     void Awake()
     {
-        // No DontDestroyOnLoad — just set instance fresh each scene
         Instance = this;
         LoadLeaderboard();
     }
@@ -87,14 +72,14 @@ public class LeaderboardManager : MonoBehaviour
             SavePlayerCard(playerName);
     }
 
-    public bool TryAddScore(string playerName, int score)
+    public bool TryAddScore(string playerName, int score, int coins)
     {
-        if (score < MIN_SCORE_TO_QUALIFY) return false;
         if (string.IsNullOrEmpty(playerName)) return false;
 
         string icon = GetPlayerIcon(playerName);
-        LeaderboardEntry newEntry = new LeaderboardEntry(playerName, score, icon);
+        LeaderboardEntry newEntry = new LeaderboardEntry(playerName, score, coins, icon);
 
+        // Only keep best score per player — update if higher, skip if lower
         for (int i = 0; i < leaderboard.entries.Count; i++)
         {
             if (leaderboard.entries[i].playerName == playerName)
@@ -119,11 +104,6 @@ public class LeaderboardManager : MonoBehaviour
     public List<LeaderboardEntry> GetEntries()
     {
         return new List<LeaderboardEntry>(leaderboard.entries);
-    }
-
-    public int GetMinScoreToQualify()
-    {
-        return MIN_SCORE_TO_QUALIFY;
     }
 
     string GetPlayerIcon(string playerName)

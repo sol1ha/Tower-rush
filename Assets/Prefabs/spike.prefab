@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: -5034054809597201777}
   m_Layer: 0
   m_Name: spike
-  m_TagString: Hazard
+  m_TagString: Spike
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -83,7 +83,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 6338856445069070684, guid: 677fa0f076102d6468a39467435cd6e1,
+  m_Sprite: {fileID: 2626103149862288497, guid: 80664d7248cdd45dba76fb2b49a5e856,
     type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
@@ -132,7 +132,7 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 2.17, y: 3.62}
+    oldSize: {x: 3.46, y: 3.68}
     newSize: {x: 2.17, y: 3.62}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -149,6 +149,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 6209945830472179170}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 85d524c025c19ad48871f1f80bb44d6c, type: 3}
+  m_Script: {fileID: 11500000, guid: 2b4fde3f3468d6744a97b446e0db3d57, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SpikeHazard
+  m_EditorClassIdentifier: Assembly-CSharp::spikes
+  damage: 1

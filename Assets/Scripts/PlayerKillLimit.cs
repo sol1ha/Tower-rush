@@ -18,14 +18,25 @@ public class PlayerKillLimit : MonoBehaviour
 
     public static bool triggerEvent;
 
+    [Tooltip("Extra units below the camera bottom before the player is killed.")]
+    public float killMargin = 0.3f;
+
     private Transform mainCamera;
     private Camera cam;
+    private Transform player;
 
     void Start()
     {
         triggerEvent = false;
         cam = Camera.main;
-        mainCamera = cam.transform;
+        if (cam != null) mainCamera = cam.transform;
+        TryFindPlayer();
+    }
+
+    void TryFindPlayer()
+    {
+        var obj = GameObject.FindGameObjectWithTag("Player");
+        if (obj != null) player = obj.transform;
     }
 
     void Update()
@@ -33,15 +44,27 @@ public class PlayerKillLimit : MonoBehaviour
         if (triggerEvent)
         {
             triggerEvent = false;
-            PlayerKill?.Invoke(this, EventArgs.Empty);
+            InvokeKillSafely(this);
+            return;
         }
 
-        // Position the kill zone right at the bottom edge of the camera view
-        if (mainCamera != null && cam != null)
+        if (mainCamera == null || cam == null) return;
+
+        float cameraBottomY = mainCamera.position.y - cam.orthographicSize + killMargin;
+
+        Vector3 pos = transform.position;
+        pos.y = cameraBottomY;
+        transform.position = pos;
+
+        if (!GameManager.Playing()) return;
+
+        if (player == null) TryFindPlayer();
+        if (player == null) return;
+
+        if (player.position.y < cameraBottomY)
         {
-            Vector3 pos = transform.position;
-            pos.y = mainCamera.position.y - cam.orthographicSize + 0.3f;
-            transform.position = pos;
+            Debug.Log($"PlayerKillLimit: player below camera (player.y={player.position.y:F2}, killY={cameraBottomY:F2}) — killing.");
+            InvokeKillSafely(this);
         }
     }
 
@@ -49,12 +72,25 @@ public class PlayerKillLimit : MonoBehaviour
     {
         if(GameManager.Playing() && collision.CompareTag("Player"))
         {
-            PlayerKill?.Invoke(this, EventArgs.Empty);
+            InvokeKillSafely(this);
+        }
+    }
+
+    // Invoke each subscriber independently so one throwing handler doesn't block the others
+    static void InvokeKillSafely(object sender)
+    {
+        var handler = PlayerKill;
+        if (handler == null) return;
+        foreach (EventHandler<EventArgs> d in handler.GetInvocationList())
+        {
+            try { d(sender, EventArgs.Empty); }
+            catch (System.Exception e) { Debug.LogError("PlayerKill handler threw: " + e); }
         }
     }
 
     public static void TriggerEventStatic()
     {
         triggerEvent = true;
+        InvokeKillSafely(null);
     }
 }

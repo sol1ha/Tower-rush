@@ -202,6 +202,7 @@ public class ContinueOrExitPopup : MonoBehaviour
     void OnEndClicked()
     {
         HidePopup();
+        HighScoreSet.FinalizeSessionCoins();
         SceneManager.LoadScene(0);
     }
 }

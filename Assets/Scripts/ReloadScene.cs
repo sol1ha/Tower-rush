@@ -23,7 +23,7 @@ public class ReloadScene : MonoBehaviour
 #if LUXODD_SDK
         if (InGameTransactionController.Instance != null)
         {
-            InGameTransactionController.Instance.OnGameOver(allowContinue: true, allowRestart: false);
+            InGameTransactionController.Instance.OnGameOver(allowContinue: true, allowRestart: true);
             firecd = false;
             return;
         }

@@ -30,7 +30,7 @@ Transform:
   m_GameObject: {fileID: 2603130407593912519}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.28, z: 0}
+  m_LocalPosition: {x: 0, y: -1.6, z: -5.55}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -85,7 +85,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 3
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -4973750590014515622, guid: 3d78ebc59a6fe44f3a33615373f1693e,
+  m_Sprite: {fileID: -191740088865349233, guid: f47a536a24c334f579db2634691f40f5,
     type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
@@ -96,8 +96,8 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!68 &5117104024900161783
-EdgeCollider2D:
+--- !u!61 &5117104024900161783
+BoxCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -130,16 +130,18 @@ EdgeCollider2D:
   m_UsedByEffector: 1
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0.4}
+  m_Offset: {x: 0, y: 0.13778952}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.5}
+    oldSize: {x: 3.46, y: 2.11}
+    newSize: {x: 10.24, y: 7.32}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 3.2, y: 1.3755791}
   m_EdgeRadius: 0
-  m_Points:
-  - {x: -1.9, y: 0}
-  - {x: 0.1470128, y: 0.27454934}
-  - {x: 1.6363963, y: -0.0038163662}
-  m_AdjacentStartPoint: {x: 0, y: 0}
-  m_AdjacentEndPoint: {x: 0, y: 0}
-  m_UseAdjacentStartPoint: 0
-  m_UseAdjacentEndPoint: 0
 --- !u!251 &5117104024900161784
 PlatformEffector2D:
   m_ObjectHideFlags: 0
@@ -171,7 +173,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 003bf5581e5fdfd4ea7138f95a780c3b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  bulletbounce: {fileID: 8300000, guid: b2066109eebdc76469efc3ff3c88682c, type: 3}
+  bulletbounce: {fileID: 0}
   jumpForce: 12
   isBoostPlatform: 0
   destroy: 1

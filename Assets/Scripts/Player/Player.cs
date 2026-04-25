@@ -1,11 +1,6 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-/// <summary>
-/// Handles the player's movement and jetpacking.
-/// </summary>
 public class Player : MonoBehaviour
 {
     public float movementSpeed = 10f;
@@ -24,25 +19,48 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        if (GameManager.Playing())
+        if (!GameManager.Playing())
         {
-            float horizontal = 0f;
-            var kb = Keyboard.current;
-            if (kb != null)
-            {
-                if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) horizontal -= 1f;
-                if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) horizontal += 1f;
-            }
-            movement = horizontal * movementSpeed;
+            movement = 0f;
+            return;
         }
+
+        float horizontal = 0f;
+
+        var kb = Keyboard.current;
+        if (kb != null)
+        {
+            if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) horizontal -= 1f;
+            if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) horizontal += 1f;
+        }
+
+        var gp = Gamepad.current;
+        if (gp != null)
+        {
+            float stick = gp.leftStick.x.ReadValue();
+            if (Mathf.Abs(stick) > 0.1f) horizontal += stick;
+        }
+
+        movement = horizontal * movementSpeed;
     }
 
     void FixedUpdate()
     {
+        if (!GameManager.Playing())
+        {
+            // Hold the player completely still until the game starts.
+            rb.linearVelocity = Vector2.zero;
+            rb.bodyType = RigidbodyType2D.Kinematic;
+            return;
+        }
+
+        if (rb.bodyType == RigidbodyType2D.Kinematic)
+            rb.bodyType = RigidbodyType2D.Dynamic;
+
         if (IsJetpacking)
         {
-            Vector2 velocity;    
-            velocity.y = jetPackThrust; //Jittery TODO FIX, move to Update and use the transform to move it in steps.
+            Vector2 velocity;
+            velocity.y = jetPackThrust;
             velocity.x = movement;
             rb.linearVelocity = velocity;
         }
@@ -53,9 +71,7 @@ public class Player : MonoBehaviour
             rb.linearVelocity = velocity;
         }
     }
-    /// <summary>
-    /// Used by <see cref="PlayerJetpack"/> to set the thrust.
-    /// </summary>
+
     public void SetJetpackThrust(float value)
     {
         jetPackThrust = value;

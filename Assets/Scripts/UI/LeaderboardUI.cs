@@ -2,15 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 
-/// <summary>
-/// Self-building leaderboard UI. Creates all UI elements automatically.
-///
-/// Unity Setup (EASY — only 2 steps):
-/// 1. Create an empty GameObject → name it "LeaderboardSystem"
-/// 2. Add components: LeaderboardManager + LeaderboardUI
-/// 3. Drag your Canvas into the "Canvas" field
-/// That's it! Everything else builds itself.
-/// </summary>
 public class LeaderboardUI : MonoBehaviour
 {
     public static LeaderboardUI Instance;
@@ -19,7 +10,7 @@ public class LeaderboardUI : MonoBehaviour
     public Canvas canvas;
 
     private GameObject leaderboardPanel;
-    private List<Text[]> rows = new List<Text[]>(); // Each row: rank, icon, name, score, stars
+    private List<Text[]> rows = new List<Text[]>();
 
     private static readonly string[] MEDALS = { "1st", "2nd", "3rd" };
     private static readonly Dictionary<string, string> FRUIT_DISPLAY = new Dictionary<string, string>()
@@ -38,61 +29,69 @@ public class LeaderboardUI : MonoBehaviour
 
     void Start()
     {
-        // PlayerKillLimit.PlayerKill += OnPlayerDeath; // Replaced by InGameTransaction flow
+        if (Instance != this) return;
 
         if (canvas == null)
             canvas = FindAnyObjectByType<Canvas>();
+        if (canvas == null) return;
 
         BuildLeaderboardPanel();
+        PlayerKillLimit.PlayerKill += OnPlayerDeath;
     }
 
     void OnDestroy()
     {
-        // PlayerKillLimit.PlayerKill -= OnPlayerDeath;
+        PlayerKillLimit.PlayerKill -= OnPlayerDeath;
     }
-
-    // ========== AUTO-BUILD UI ==========
 
     void BuildLeaderboardPanel()
     {
-        // Main panel
         leaderboardPanel = CreatePanel("LeaderboardPanel", canvas.transform);
         Image bg = leaderboardPanel.GetComponent<Image>();
         bg.color = new Color(0.05f, 0.1f, 0.2f, 0.95f);
 
-        // Title
         CreateText("LEADERBOARD", leaderboardPanel.transform,
             new Vector2(0, 200), 32, FontStyle.Bold, new Color(1f, 0.84f, 0f));
 
-        // Column headers
         float headerY = 160;
         CreateText("RANK", leaderboardPanel.transform, new Vector2(-200, headerY), 14, FontStyle.Bold, Color.gray);
         CreateText("", leaderboardPanel.transform, new Vector2(-130, headerY), 14, FontStyle.Bold, Color.gray);
         CreateText("PLAYER", leaderboardPanel.transform, new Vector2(-20, headerY), 14, FontStyle.Bold, Color.gray);
         CreateText("SCORE", leaderboardPanel.transform, new Vector2(130, headerY), 14, FontStyle.Bold, Color.gray);
-        CreateText("STARS", leaderboardPanel.transform, new Vector2(220, headerY), 14, FontStyle.Bold, Color.gray);
+        CreateText("COINS", leaderboardPanel.transform, new Vector2(220, headerY), 14, FontStyle.Bold, Color.gray);
 
-        // 10 rows
         for (int i = 0; i < 10; i++)
         {
             float y = 120 - i * 35;
             Text[] row = new Text[5];
-            row[0] = CreateText("", leaderboardPanel.transform, new Vector2(-200, y), 18, FontStyle.Normal, Color.white); // rank
-            row[1] = CreateText("", leaderboardPanel.transform, new Vector2(-130, y), 18, FontStyle.Normal, Color.white); // icon
-            row[2] = CreateText("", leaderboardPanel.transform, new Vector2(-20, y), 18, FontStyle.Normal, Color.white);  // name
-            row[3] = CreateText("", leaderboardPanel.transform, new Vector2(130, y), 18, FontStyle.Normal, Color.white);  // score
-            row[4] = CreateText("", leaderboardPanel.transform, new Vector2(220, y), 18, FontStyle.Normal, new Color(1f, 0.84f, 0f)); // stars
+            row[0] = CreateText("", leaderboardPanel.transform, new Vector2(-200, y), 18, FontStyle.Normal, Color.white);
+            row[1] = CreateText("", leaderboardPanel.transform, new Vector2(-130, y), 18, FontStyle.Normal, Color.white);
+            row[2] = CreateText("", leaderboardPanel.transform, new Vector2(-20, y), 18, FontStyle.Normal, Color.white);
+            row[3] = CreateText("", leaderboardPanel.transform, new Vector2(130, y), 18, FontStyle.Normal, Color.white);
+            row[4] = CreateText("", leaderboardPanel.transform, new Vector2(220, y), 18, FontStyle.Normal, new Color(1f, 0.84f, 0f));
             rows.Add(row);
         }
 
-        // "Press any key to restart" at bottom
-        CreateText("Press any key to restart", leaderboardPanel.transform,
-            new Vector2(0, -230), 16, FontStyle.Italic, Color.gray);
+        // Close button
+        GameObject closeBtn = new GameObject("CloseButton");
+        closeBtn.transform.SetParent(leaderboardPanel.transform, false);
+        RectTransform closeRect = closeBtn.AddComponent<RectTransform>();
+        closeRect.anchoredPosition = new Vector2(0, -230);
+        closeRect.sizeDelta = new Vector2(200, 45);
+        Image closeBg = closeBtn.AddComponent<Image>();
+        closeBg.color = new Color(0.6f, 0.15f, 0.15f, 1f);
+        Button closeButton = closeBtn.AddComponent<Button>();
+        closeButton.targetGraphic = closeBg;
+        closeButton.onClick.AddListener(Hide);
+
+        Text closeTxt = CreateText("CLOSE", closeBtn.transform, Vector2.zero, 20, FontStyle.Bold, Color.white);
+        closeTxt.rectTransform.anchorMin = Vector2.zero;
+        closeTxt.rectTransform.anchorMax = Vector2.one;
+        closeTxt.rectTransform.offsetMin = Vector2.zero;
+        closeTxt.rectTransform.offsetMax = Vector2.zero;
 
         leaderboardPanel.SetActive(false);
     }
-
-    // ========== HELPERS ==========
 
     GameObject CreatePanel(string name, Transform parent)
     {
@@ -125,33 +124,31 @@ public class LeaderboardUI : MonoBehaviour
         return text;
     }
 
-    // ========== GAME LOGIC ==========
-
     void OnPlayerDeath(object sender, System.EventArgs e)
     {
-        int score = ActualScoreDisplay.CurrentScore;
-        Debug.Log("LEADERBOARD: Player died! Score = " + score);
-        HighScoreSet.SetHighscore(score);
+        if (LeaderboardManager.Instance == null) return;
 
-        if (LeaderboardManager.Instance == null)
+        // Calculate score directly — don't rely on ActualScoreDisplay timing
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        int height = 0;
+        if (playerObj != null)
+            height = Mathf.Max(0, (int)playerObj.transform.position.y);
+        int coins = HighScoreSet.gameScore;
+        int score = height + coins;
+
+        string playerName = LeaderboardManager.Instance.GetSavedPlayerName();
+        if (string.IsNullOrEmpty(playerName))
         {
-            Debug.Log("LEADERBOARD: LeaderboardManager.Instance is NULL!");
-            return;
+            playerName = "Player";
+            LeaderboardManager.Instance.SetCurrentPlayer(playerName);
         }
 
-        if (score < LeaderboardManager.Instance.GetMinScoreToQualify())
-        {
-            Debug.Log("LEADERBOARD: Score " + score + " too low (need " + LeaderboardManager.Instance.GetMinScoreToQualify() + ")");
-            return;
-        }
-
-        string playerName = "amy_susu2"; // Default name
-        LeaderboardManager.Instance.SetCurrentPlayer(playerName);
-        LeaderboardManager.Instance.TryAddScore(playerName, score);
+        Debug.Log("LEADERBOARD: Adding score=" + score + " coins=" + coins + " for " + playerName);
+        LeaderboardManager.Instance.TryAddScore(playerName, score, coins);
         ShowLeaderboard();
     }
 
-    void ShowLeaderboard()
+    public void ShowLeaderboard()
     {
         leaderboardPanel.SetActive(true);
 
@@ -166,31 +163,24 @@ public class LeaderboardUI : MonoBehaviour
                 bool isYou = entry.playerName == currentPlayer;
                 Color rowColor = isYou ? Color.yellow : Color.white;
 
-                // Rank
                 rows[i][0].text = i < 3 ? MEDALS[i] : (i + 1).ToString();
                 rows[i][0].color = i == 0 ? new Color(1f, 0.84f, 0f) :
                                    i == 1 ? new Color(0.75f, 0.75f, 0.75f) :
                                    i == 2 ? new Color(0.8f, 0.5f, 0.2f) : rowColor;
 
-                // Icon
                 string display;
                 FRUIT_DISPLAY.TryGetValue(entry.icon, out display);
                 rows[i][1].text = "[" + (display ?? "?") + "]";
                 rows[i][1].color = rowColor;
 
-                // Name
                 rows[i][2].text = entry.playerName;
                 rows[i][2].color = rowColor;
                 rows[i][2].fontStyle = isYou ? FontStyle.Bold : FontStyle.Normal;
 
-                // Score
                 rows[i][3].text = entry.score.ToString();
                 rows[i][3].color = rowColor;
 
-                // Stars
-                string stars = "";
-                for (int s = 0; s < entry.stars; s++) stars += "*";
-                rows[i][4].text = stars;
+                rows[i][4].text = entry.coins.ToString();
             }
             else
             {

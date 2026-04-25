@@ -23,14 +23,20 @@ public class InGameTransactionController : MonoBehaviour
             Destroy(gameObject);
     }
 
+#if LUXODD_SDK
+    private bool _allowRestart;
+#endif
+
     // Call this from your gameplay when the run ends (0 lives, timer expired, etc.)
     public void OnGameOver(bool allowContinue, bool allowRestart)
     {
 #if LUXODD_SDK
+        _allowRestart = allowRestart;
+
         // 1) Freeze/pause gameplay first (VERY IMPORTANT)
         PauseGameplay();
 
-        // 2) Choose which popup you want to show based on your game design.
+        // 2) Show Continue first if allowed, then Restart on End
         if (allowContinue)
         {
             ShowContinuePopup();
@@ -72,17 +78,18 @@ public class InGameTransactionController : MonoBehaviour
         switch (action)
         {
             case SessionOptionAction.Continue:
-                // Player paid credits -> you must implement continuation logic
                 ResumeGameplayWithContinueBonus();
                 break;
 
             case SessionOptionAction.End:
-                // Player ended the run -> send results + return to system
-                EndSessionAndReturnToSystem();
+                // Player declined to continue — offer Restart if allowed, otherwise exit
+                if (_allowRestart)
+                    ShowRestartPopup();
+                else
+                    EndSessionAndReturnToSystem();
                 break;
 
             default:
-                // Safety fallback
                 EndSessionAndReturnToSystem();
                 break;
         }
@@ -134,19 +141,18 @@ public class InGameTransactionController : MonoBehaviour
     // Game-specific helpers
     // -------------------------
 
+#if LUXODD_SDK
     private void PauseGameplay()
     {
-        Time.timeScale = 0f; 
+        Time.timeScale = 0f;
         GameManager.instance.play = false;
     }
 
     private void ResumeGameplayWithContinueBonus()
     {
-        // 1) Restore time scale / unpause systems
         Time.timeScale = 1f;
         GameManager.instance.play = true;
 
-        // 2) Restore Player Health and Position
         PlayerHealth playerHealth = FindAnyObjectByType<PlayerHealth>();
         if (playerHealth != null)
         {
@@ -155,4 +161,5 @@ public class InGameTransactionController : MonoBehaviour
 
         Debug.Log("Continuing the same session: restoring gameplay state...");
     }
+#endif
 }

@@ -39,16 +39,10 @@ public class CoinCollectedDisplay : MonoBehaviour
     {
         if (text != null)
         {
-            if (GameManager.Playing())
-            {
-                // During gameplay, show only what was collected this session
-                text.text = HighScoreSet.gameScore.ToString();
-            }
-            else
-            {
-                // On the home screen / menu, show the total saved amount
-                text.text = HighScoreSet.PersistentCoins.ToString();
-            }
+            // Always show coins collected this session.
+            // gameScore resets to 0 when the scene reloads (new game start),
+            // so after death the last run's coins remain visible until the player restarts.
+            text.text = HighScoreSet.gameScore.ToString();
         }
     }
 }
