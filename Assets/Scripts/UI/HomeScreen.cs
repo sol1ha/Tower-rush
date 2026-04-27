@@ -28,28 +28,12 @@ public class HomeScreen : MonoBehaviour
     [Tooltip("Seconds to crossfade between menu and game music.")]
     public float musicFadeSeconds = 0.6f;
 
-    [Header("Auto-start countdown")]
-    [Tooltip("If true, a visible animated countdown is auto-attached to the home panel and triggers StartGame() at zero.")]
-    public bool autoCreateCountdown = true;
-    [Tooltip("Seconds before the menu auto-starts the game.")]
-    public float autoStartSeconds = 30f;
-
-    private HomeMenuCountdown countdown;
-
     void Awake()
     {
         if (playButton != null)
         {
             playButton.onClick.RemoveListener(StartGame);
             playButton.onClick.AddListener(StartGame);
-        }
-
-        if (autoCreateCountdown)
-        {
-            GameObject host = homePanel != null ? homePanel : gameObject;
-            countdown = host.GetComponentInChildren<HomeMenuCountdown>(true);
-            if (countdown == null) countdown = host.AddComponent<HomeMenuCountdown>();
-            countdown.autoStartSeconds = autoStartSeconds;
         }
     }
 
@@ -74,15 +58,6 @@ public class HomeScreen : MonoBehaviour
         }
 
         if (GameManager.instance != null) GameManager.instance.play = false;
-
-        // (Re)enable the countdown when returning to the home menu so it
-        // restarts from full time.
-        if (countdown != null)
-        {
-            countdown.autoStartSeconds = autoStartSeconds;
-            countdown.enabled = true;
-            countdown.gameObject.SetActive(true);
-        }
 
         try { if (gameMusic != null) gameMusic.Stop(musicFadeSeconds); } catch { }
         try { if (menuMusic != null) menuMusic.Play(); } catch { }
