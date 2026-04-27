@@ -23,6 +23,13 @@ public class Platform : MonoBehaviour
         {
             bulletbounce.playOnAwake = false;
             bulletbounce.Stop();
+            // Make sure the legacy clip slot is filled if only the new resource
+            // slot has the AudioClip — otherwise PlayOneShot / Play might no-op.
+            if (bulletbounce.clip == null && bulletbounce.resource is AudioClip rc)
+                bulletbounce.clip = rc;
+            if (bulletbounce.volume <= 0f) bulletbounce.volume = 0.25f;
+            bulletbounce.mute = false;
+            bulletbounce.enabled = true;
         }
         ownCollider = GetComponent<Collider2D>();
     }
@@ -115,8 +122,8 @@ public class Platform : MonoBehaviour
                 laserRef.ResetSpeed();
         }
 
-        if (bulletbounce != null && bulletbounce.enabled)
-            bulletbounce.Play();
+        if (bulletbounce != null && bulletbounce.enabled && bulletbounce.clip != null)
+            bulletbounce.PlayOneShot(bulletbounce.clip);
     }
 
     // Returns the player's main/largest Collider2D (the one that should define their footprint).

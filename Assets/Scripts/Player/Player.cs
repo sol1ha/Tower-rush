@@ -46,6 +46,11 @@ public class Player : MonoBehaviour
         if (GameManager.instance != null) GameManager.instance.play = true;
         var rb2d = GetComponent<Rigidbody2D>();
         if (rb2d != null) rb2d.bodyType = RigidbodyType2D.Dynamic;
+
+        // Make sure the global AudioListener isn't silenced (e.g. left at 0 by
+        // some other script) so coin / bounce / death SFX are audible.
+        AudioListener.volume = 1f;
+        AudioListener.pause = false;
     }
 
     void Update()

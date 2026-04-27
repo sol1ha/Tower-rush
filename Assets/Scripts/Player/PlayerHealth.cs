@@ -48,6 +48,10 @@ public class PlayerHealth : MonoBehaviour
         {
             audioSource.playOnAwake = false;
             audioSource.Stop();
+            if (audioSource.clip == null && audioSource.resource is AudioClip rc)
+                audioSource.clip = rc;
+            audioSource.mute = false;
+            audioSource.enabled = true;
         }
         PlayerKillLimit.PlayerKill += PlayerKillLimit_PlayerKill;
 
