@@ -132,11 +132,24 @@ public class Laser_kill : MonoBehaviour
 
         if (after > 0 && player != null)
         {
-            Vector3 p = player.position;
-            p.y = killBounds.max.y + respawnYOffset;
-            player.position = p;
-            if (playerRb != null) playerRb.linearVelocity = Vector2.zero;
-            lastPlayerPos = p;
+            // Bump the player up only as far as needed to clear the laser, and rely on
+            // an upward velocity impulse instead of a hard teleport so the camera doesn't snap.
+            float minClearance = 0.05f;
+            float currentY = player.position.y;
+            float targetY = killBounds.max.y + minClearance;
+            if (currentY < targetY)
+            {
+                Vector3 p = player.position;
+                p.y = targetY;
+                player.position = p;
+            }
+            if (playerRb != null)
+            {
+                Vector2 v = playerRb.linearVelocity;
+                v.y = Mathf.Max(v.y, respawnYOffset * 4f);
+                playerRb.linearVelocity = v;
+            }
+            lastPlayerPos = player.position;
         }
     }
 
