@@ -30,13 +30,18 @@ public class HomeScreen : MonoBehaviour
     public float musicFadeSeconds = 0.6f;
 
     // ---------- Designed countdown built into HomeScreen ----------
-    [Header("Countdown — drag YOUR TMP text here")]
-    [Tooltip("Drag the TMP text you created in Unity. Leave empty to disable the countdown.")]
+    [Header("Countdown — drag YOUR TMP text here (optional)")]
+    [Tooltip("Drag the TMP text you created in Unity. If left empty, one is auto-created inside the home panel's canvas.")]
     public TMP_Text countdownLabel;
     [Tooltip("Format string. {0} is replaced with the integer seconds remaining.")]
     public string countdownFormat = "Starting in {0}s";
     [Tooltip("Seconds before the menu auto-starts.")]
     public float autoStartSeconds = 30f;
+
+    [Header("Auto-create (only used when 'Countdown Label' is empty)")]
+    public int autoLabelFontSize = 96;
+    public Vector2 autoLabelAnchoredPosition = new Vector2(0f, -180f);
+    public Vector2 autoLabelSizeDelta = new Vector2(900f, 200f);
 
     [Header("Countdown design")]
     public bool useVertexGradient = true;
@@ -89,6 +94,8 @@ public class HomeScreen : MonoBehaviour
             playButton.onClick.AddListener(StartGame);
         }
 
+        if (countdownLabel == null) AutoCreateCountdownLabel();
+
         if (countdownLabel != null)
         {
             countdownRect = countdownLabel.rectTransform;
@@ -96,6 +103,36 @@ public class HomeScreen : MonoBehaviour
             countdownRemaining = autoStartSeconds;
             StyleCountdown();
         }
+    }
+
+    void AutoCreateCountdownLabel()
+    {
+        Canvas canvas = null;
+        if (homePanel != null) canvas = homePanel.GetComponentInParent<Canvas>();
+        if (canvas == null) canvas = GetComponentInParent<Canvas>();
+        if (canvas == null) canvas = FindAnyObjectByType<Canvas>();
+        if (canvas == null) return;
+
+        Transform parent = homePanel != null ? homePanel.transform : (Transform)canvas.transform;
+
+        GameObject go = new GameObject("CountdownLabel", typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+
+        var tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.enableWordWrapping = false;
+        tmp.fontSize = autoLabelFontSize;
+        tmp.text = string.Format(countdownFormat, Mathf.CeilToInt(autoStartSeconds));
+
+        var rt = tmp.rectTransform;
+        rt.anchorMin = new Vector2(0.5f, 1f);
+        rt.anchorMax = new Vector2(0.5f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = autoLabelSizeDelta;
+        rt.anchoredPosition = autoLabelAnchoredPosition;
+
+        countdownLabel = tmp;
     }
 
     void Start()
