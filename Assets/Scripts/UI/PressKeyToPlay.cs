@@ -45,8 +45,20 @@ public class PressKeyToPlay : MonoBehaviour
             HideCountdownUi();
             this.enabled = false;
 
-            if (GameManager.instance != null)
-                GameManager.StartGame();
+            // Route through HomeScreen.StartGame so time.timeScale is unfrozen,
+            // hidden gameplay objects are activated, and music is swapped — not
+            // just GameManager.play, which by itself leaves the world frozen.
+            HomeScreen home = FindAnyObjectByType<HomeScreen>();
+            if (home != null)
+            {
+                home.StartGame();
+            }
+            else
+            {
+                Time.timeScale = 1f;
+                if (GameManager.instance != null)
+                    GameManager.StartGame();
+            }
 
             if (rb != null)
             {

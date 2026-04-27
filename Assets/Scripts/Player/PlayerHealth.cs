@@ -44,6 +44,11 @@ public class PlayerHealth : MonoBehaviour
         bloodHitPS = GetComponent<ParticleSystem>();
         playerCollider = GetComponent<BoxCollider2D>();
         audioSource = GetComponent<AudioSource>();
+        if (audioSource != null)
+        {
+            audioSource.playOnAwake = false;
+            audioSource.Stop();
+        }
         PlayerKillLimit.PlayerKill += PlayerKillLimit_PlayerKill;
 
         if (damagePopupText != null)

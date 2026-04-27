@@ -19,6 +19,11 @@ public class Platform : MonoBehaviour
     private void Awake()
     {
         bulletbounce = GetComponent<AudioSource>();
+        if (bulletbounce != null)
+        {
+            bulletbounce.playOnAwake = false;
+            bulletbounce.Stop();
+        }
         ownCollider = GetComponent<Collider2D>();
     }
 
@@ -89,36 +94,14 @@ public class Platform : MonoBehaviour
         Rigidbody2D rb = collision.collider.GetComponentInParent<Rigidbody2D>();
         if (rb == null) return;
 
+        // Don't double-bounce while already shooting up.
         if (rb.linearVelocity.y > 5f) return;
 
         Player player = collision.collider.GetComponentInParent<Player>();
         if (player != null && player.IsJetpacking) return;
 
-        // Always snap the player to sit on top of the platform.
-        // This guarantees consistent landing across every platform regardless of approach angle.
-        if (ownCollider == null) ownCollider = GetComponent<Collider2D>();
-        Collider2D playerCol = FindPlayerMainCollider(rb);
-        if (ownCollider != null && playerCol != null)
-        {
-            // Only bounce if the player is horizontally over the platform.
-            // Skip side grazes (player center outside platform's X range).
-            float platformLeft = ownCollider.bounds.min.x;
-            float platformRight = ownCollider.bounds.max.x;
-            if (rb.position.x < platformLeft || rb.position.x > platformRight) return;
-
-            float platformTop = ownCollider.bounds.max.y;
-            float playerBottomOffset = playerCol.bounds.min.y - rb.position.y;
-            float targetRbY = platformTop - playerBottomOffset;
-
-            Vector2 snapPos = rb.position;
-            snapPos.y = targetRbY;
-            rb.position = snapPos;
-
-            Vector3 tPos = rb.transform.position;
-            tPos.y = targetRbY;
-            rb.transform.position = tPos;
-        }
-
+        // Bounce on any valid contact — no X-range or side-graze early-out, so
+        // a player landing on the edge of a platform still bounces normally.
         Vector2 velocity = rb.linearVelocity;
         velocity.y = jumpForce;
         rb.linearVelocity = velocity;

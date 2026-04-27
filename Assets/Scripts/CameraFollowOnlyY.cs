@@ -3,9 +3,8 @@ using UnityEngine;
 public class CameraFollowOnlyY : MonoBehaviour
 {
     public Transform target;
-    public float smoothSpeed = .3f;
-
-    private Vector3 currentVelocity;
+    [Tooltip("How quickly the camera catches up to the player (higher = tighter follow). 12-20 feels good.")]
+    public float followLerpSpeed = 14f;
 
     void LateUpdate()
     {
@@ -14,7 +13,8 @@ public class CameraFollowOnlyY : MonoBehaviour
         if (target.position.y > transform.position.y)
         {
             Vector3 newPos = new Vector3(transform.position.x, target.position.y, transform.position.z);
-            transform.position = Vector3.SmoothDamp(transform.position, newPos, ref currentVelocity, smoothSpeed * Time.deltaTime);
+            float t = 1f - Mathf.Exp(-followLerpSpeed * Time.deltaTime);
+            transform.position = Vector3.Lerp(transform.position, newPos, t);
         }
     }
 }
