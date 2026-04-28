@@ -59,15 +59,15 @@ public class HomeScreen : MonoBehaviour
     public Vector2 autoLabelAnchoredPosition = new Vector2(360f, -40f);
     public Vector2 autoLabelSizeDelta = new Vector2(360f, 110f);
 
-    [Header("In-game sand-jar clock")]
-    [Tooltip("If true, auto-spawns an hourglass clock that drains over 1 minute and ramps difficulty (more bullets) every minute.")]
-    public bool spawnSandJarClock = true;
-    public SandJarClock.Corner sandJarCorner = SandJarClock.Corner.BottomRight;
+    [Header("In-game elapsed-time text")]
+    [Tooltip("If true, auto-spawns a simple MM:SS time label in a corner of the canvas during gameplay.")]
+    public bool spawnPlayTimeText = true;
+    public PlayTimeText.Corner playTimeTextCorner = PlayTimeText.Corner.BottomRight;
 
     private SegmentDigitalClock segmentClock;
     private RectTransform segmentClockRect;
     private Vector2 segmentClockBasePos;
-    private SandJarClock sandJarClock;
+    private PlayTimeText playTimeText;
 
     [Header("Countdown design")]
     public bool useVertexGradient = true;
@@ -249,8 +249,8 @@ public class HomeScreen : MonoBehaviour
             segmentClock.SetTotalSeconds(Mathf.CeilToInt(autoStartSeconds));
         }
 
-        // Hide the in-game sand-jar clock while we're back on the home menu.
-        if (sandJarClock != null) sandJarClock.Hide();
+        // Hide the in-game play-time text while we're back on the home menu.
+        if (playTimeText != null) playTimeText.Hide();
 
         try { if (gameMusic != null) gameMusic.Stop(musicFadeSeconds); } catch { }
         try { if (menuMusic != null) menuMusic.Play(); } catch { }
@@ -294,17 +294,17 @@ public class HomeScreen : MonoBehaviour
         if (GameManager.instance != null) GameManager.instance.play = true;
         else GameManager.StartGame();
 
-        // Spawn the in-game sand-jar clock (drains over 1 min; bumps bullet difficulty per minute).
-        if (spawnSandJarClock)
+        // Spawn the simple in-game play-time text (MM:SS, ticks while playing).
+        if (spawnPlayTimeText)
         {
-            if (sandJarClock == null)
+            if (playTimeText == null)
             {
-                var clockGo = new GameObject("SandJarClockHost");
-                sandJarClock = clockGo.AddComponent<SandJarClock>();
-                sandJarClock.anchorCorner = sandJarCorner;
+                var go = new GameObject("PlayTimeTextHost");
+                playTimeText = go.AddComponent<PlayTimeText>();
+                playTimeText.anchorCorner = playTimeTextCorner;
             }
-            sandJarClock.ResetTime();
-            sandJarClock.Show();
+            playTimeText.ResetTime();
+            playTimeText.Show();
         }
 
         try { if (menuMusic != null) menuMusic.Stop(musicFadeSeconds); } catch { }
