@@ -33,15 +33,17 @@ public class HomeScreen : MonoBehaviour
     [Header("Countdown — drag YOUR TMP text here (optional)")]
     [Tooltip("Drag the TMP text you created in Unity. If left empty, one is auto-created inside the home panel's canvas.")]
     public TMP_Text countdownLabel;
-    [Tooltip("Format string. {0} is replaced with the integer seconds remaining.")]
-    public string countdownFormat = "Starting in {0}s";
     [Tooltip("Seconds before the menu auto-starts.")]
     public float autoStartSeconds = 30f;
+    [Tooltip("Show the timer as MM:SS (e.g. 00:30) instead of as plain seconds.")]
+    public bool digitalClockFormat = true;
+    [Tooltip("Format string used when 'digitalClockFormat' is OFF. {0} = seconds remaining.")]
+    public string countdownFormat = "{0}s";
 
     [Header("Auto-create (only used when 'Countdown Label' is empty)")]
-    public int autoLabelFontSize = 96;
-    public Vector2 autoLabelAnchoredPosition = new Vector2(0f, -180f);
-    public Vector2 autoLabelSizeDelta = new Vector2(900f, 200f);
+    public int autoLabelFontSize = 60;
+    public Vector2 autoLabelAnchoredPosition = new Vector2(180f, 0f);
+    public Vector2 autoLabelSizeDelta = new Vector2(360f, 110f);
 
     [Header("Countdown design")]
     public bool useVertexGradient = true;
@@ -58,10 +60,10 @@ public class HomeScreen : MonoBehaviour
     [Range(0f, 1f)] public float shadowSoftness = 0.45f;
     public float characterSpacing = 8f;
 
-    [Header("Countdown colors")]
-    public Color colorFull = new Color(0.55f, 0.85f, 1f, 1f);   // calm cyan-blue
-    public Color colorMid = new Color(1f, 0.78f, 0.30f, 1f);    // warm gold
-    public Color colorLow = new Color(1f, 0.32f, 0.32f, 1f);    // alarm red
+    [Header("Countdown colors (digital LCD palette)")]
+    public Color colorFull = new Color(0.18f, 0.40f, 1.00f, 1f); // digital cobalt blue
+    public Color colorMid  = new Color(0.20f, 0.85f, 1.00f, 1f); // bright cyan
+    public Color colorLow  = new Color(1.00f, 0.30f, 0.20f, 1f); // alarm red
     public float lowThreshold = 5f;
     public float midThreshold = 15f;
 
@@ -123,16 +125,30 @@ public class HomeScreen : MonoBehaviour
         tmp.fontStyle = FontStyles.Bold;
         tmp.enableWordWrapping = false;
         tmp.fontSize = autoLabelFontSize;
-        tmp.text = string.Format(countdownFormat, Mathf.CeilToInt(autoStartSeconds));
+        tmp.text = FormatCountdownText(Mathf.CeilToInt(autoStartSeconds));
 
+        // Anchor to the screen center (slightly above middle by default) so the
+        // label sits visually around the centre of the home menu, not glued to
+        // the top of the canvas.
         var rt = tmp.rectTransform;
-        rt.anchorMin = new Vector2(0.5f, 1f);
-        rt.anchorMax = new Vector2(0.5f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
         rt.sizeDelta = autoLabelSizeDelta;
         rt.anchoredPosition = autoLabelAnchoredPosition;
 
         countdownLabel = tmp;
+    }
+
+    string FormatCountdownText(int totalSeconds)
+    {
+        if (digitalClockFormat)
+        {
+            int mm = totalSeconds / 60;
+            int ss = totalSeconds % 60;
+            return mm.ToString("00") + ":" + ss.ToString("00");
+        }
+        return string.Format(countdownFormat, totalSeconds);
     }
 
     void Start()
@@ -269,7 +285,7 @@ public class HomeScreen : MonoBehaviour
     {
         if (!styledOnce) StyleCountdown();
 
-        countdownLabel.text = string.Format(countdownFormat, lastShownSecond);
+        countdownLabel.text = FormatCountdownText(lastShownSecond);
 
         // ---- color drift ----
         Color baseColor;
