@@ -61,6 +61,10 @@ public class LevelGenerator : MonoBehaviour
     public int boostEach;
     public int coinEach;
     public Vector3 coinOffset;
+    [Tooltip("Vertical offset (in world units) above the platform's center where each spike is placed.")]
+    public float spikeYOffset = 1.2f;
+    [Tooltip("Horizontal spread of spikes across a platform. 1 = full collider width, 0.85 = inset 15% so they don't hang off the edge.")]
+    [Range(0.3f, 1.0f)] public float spikeSpreadRatio = 0.7f;
     private int boostCounter = 0;
     private int coinCounter = 5;
 
@@ -306,19 +310,29 @@ public class LevelGenerator : MonoBehaviour
     {
         if (spikePrefab == null) return;
 
-        // Spawn 2 or 3 spikes, spread evenly across the platform
-        int spikeCount = Random.Range(2, 4); // 2 or 3
-        SpriteRenderer sr = platform.GetComponent<SpriteRenderer>();
-        float platformWidth = sr != null ? sr.bounds.size.x : 1.5f;
-        float platformTop = sr != null ? sr.bounds.size.y * 0.5f : 0.2f;
+        // Use the platform's BoxCollider2D to decide how wide the spike row can
+        // be, but the vertical placement is a fixed 'spikeYOffset' above the
+        // platform's center so spikes always sit clearly on top, not embedded.
+        BoxCollider2D bc = platform.GetComponent<BoxCollider2D>();
+        float platformWidth;
+        if (bc != null) platformWidth = bc.size.x;
+        else
+        {
+            SpriteRenderer sr = platform.GetComponent<SpriteRenderer>();
+            platformWidth = sr != null ? sr.bounds.size.x : 1.5f;
+        }
 
-        float spacing = platformWidth / (spikeCount + 1);
-        float startX = platformPos.x - platformWidth * 0.5f;
+        // Spawn 2 or 3 spikes, spread across an inset portion of the platform
+        // so they don't hang off the edges.
+        int spikeCount = Random.Range(2, 4); // 2 or 3
+        float usable = platformWidth * Mathf.Clamp(spikeSpreadRatio, 0.3f, 1f);
+        float spacing = usable / (spikeCount + 1);
+        float startX = platformPos.x - usable * 0.5f;
 
         for (int i = 0; i < spikeCount; i++)
         {
             float x = startX + spacing * (i + 1);
-            Vector3 spikePos = new Vector3(x, platformPos.y + platformTop, 0f);
+            Vector3 spikePos = new Vector3(x, platformPos.y + spikeYOffset, 0f);
             GameObject spike = Instantiate(spikePrefab, spikePos, Quaternion.identity);
             spike.transform.SetParent(platform.transform);
         }
