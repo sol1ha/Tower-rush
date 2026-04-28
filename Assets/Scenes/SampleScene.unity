@@ -208,7 +208,7 @@ MonoBehaviour:
   maxSpikeChance: 0.6
   doubleJumpGapThreshold: 4
   safePlatformsBetweenSpikes: 2
-  boostEach: 25
+  boostEach: 8
   coinEach: 10
   coinOffset: {x: 0, y: 1, z: 0}
 --- !u!4 &179503662
@@ -7911,7 +7911,6 @@ MonoBehaviour:
   - {fileID: 275546990}
   - {fileID: 1800613602}
   - {fileID: 1174461339}
-  - {fileID: 1202230025}
   - {fileID: 404893099}
   - {fileID: 574831663}
   - {fileID: 1975973994}
