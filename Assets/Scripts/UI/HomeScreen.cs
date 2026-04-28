@@ -78,10 +78,10 @@ public class HomeScreen : MonoBehaviour
     [Range(0f, 1f)] public float shadowSoftness = 0.45f;
     public float characterSpacing = 8f;
 
-    [Header("Countdown colors (digital LCD palette)")]
-    public Color colorFull = new Color(0.18f, 0.40f, 1.00f, 1f); // digital cobalt blue
-    public Color colorMid  = new Color(0.20f, 0.85f, 1.00f, 1f); // bright cyan
-    public Color colorLow  = new Color(1.00f, 0.30f, 0.20f, 1f); // alarm red
+    [Header("Countdown colors (dark-red palette)")]
+    public Color colorFull = new Color(0.58f, 0.08f, 0.08f, 1f); // dark red
+    public Color colorMid  = new Color(0.75f, 0.14f, 0.14f, 1f); // mid red (warning)
+    public Color colorLow  = new Color(0.95f, 0.22f, 0.22f, 1f); // bright red (alarm)
     public float lowThreshold = 5f;
     public float midThreshold = 15f;
 

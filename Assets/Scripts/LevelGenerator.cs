@@ -116,7 +116,7 @@ public class LevelGenerator : MonoBehaviour
                 coinCounter++;
                 if (boostCounter % boostEach == 0)
                 {
-                    Instantiate(boostPrefab, spawnPosition, Quaternion.identity, transform);
+                    SpawnBoostFromBase(spawnPosition);
                 }
                 else
                 {
@@ -168,7 +168,7 @@ public class LevelGenerator : MonoBehaviour
                 coinCounter++;
                 if (boostCounter % boostEach == 0)
                 {
-                    Instantiate(boostPrefab, spawnPosition, Quaternion.identity, transform);
+                    SpawnBoostFromBase(spawnPosition);
                 }
                 else
                 {
@@ -192,6 +192,21 @@ public class LevelGenerator : MonoBehaviour
                 lastPosition = spawnPosition;
             }
         }
+    }
+
+    // Spawns a boost platform that visually matches the regular platform exactly
+    // (same prefab, same size, same collider). It just gets isBoostPlatform=true
+    // and a tinted sprite so it's recognizable.
+    void SpawnBoostFromBase(Vector3 pos)
+    {
+        GameObject p = Instantiate(platformPrefab, pos, Quaternion.identity, transform);
+        platformCount++;
+
+        var plat = p.GetComponent<Platform>();
+        if (plat != null) plat.isBoostPlatform = true;
+
+        var sr = p.GetComponent<SpriteRenderer>();
+        if (sr != null) sr.color = new Color(1f, 0.55f, 0.20f); // orange tint = boost
     }
 
     bool OverlapsRecent(float x, float y)
