@@ -106,19 +106,30 @@ public class Player : MonoBehaviour
             velocity.x = movement;
 
             // Auto-bounce fallback: if player is descending or stationary AND
-            // touching ground beneath them, apply jumpForce. This guarantees
-            // bouncing even if Platform.OnCollision* doesn't fire for some reason.
-            if (velocity.y <= 0.1f && IsGrounded())
+            // touching ground beneath them, apply that platform's actual bounce
+            // force (so a slow landing on a boost platform still goes high, not
+            // a generic fallback height).
+            if (velocity.y <= 0.1f)
             {
-                velocity.y = autoBounceForce;
+                Platform platUnder;
+                if (IsGroundedOnPlatform(out platUnder))
+                {
+                    if (platUnder != null && platUnder.isBoostPlatform)
+                        velocity.y = platUnder.jumpForce * platUnder.boostJumpMultiplier;
+                    else if (platUnder != null)
+                        velocity.y = platUnder.jumpForce;
+                    else
+                        velocity.y = autoBounceForce;
+                }
             }
 
             rb.linearVelocity = velocity;
         }
     }
 
-    bool IsGrounded()
+    bool IsGroundedOnPlatform(out Platform platform)
     {
+        platform = null;
         if (mainCol == null) return false;
         Bounds b = mainCol.bounds;
         Vector2 boxCenter = new Vector2(b.center.x, b.min.y - groundProbeDistance * 0.5f);
@@ -129,6 +140,7 @@ public class Player : MonoBehaviour
             if (h == null) continue;
             if (h.transform.IsChildOf(transform) || h.transform == transform) continue;
             if (h.isTrigger) continue;
+            platform = h.GetComponentInParent<Platform>();
             return true;
         }
         return false;

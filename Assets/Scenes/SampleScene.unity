@@ -192,8 +192,8 @@ MonoBehaviour:
     type: 3}
   numberOfPlatforms: 5000
   levelWidth: 8
-  minY: 3
-  maxY: 4.5
+  minY: 4
+  maxY: 5.5
   spreadX: 8
   minXGap: 3
   maxXGap: 9
@@ -6359,6 +6359,7 @@ MonoBehaviour:
   musicClip: {fileID: 8300000, guid: 33f2d3dc14fae433eb802354a303e69f, type: 3}
   volume: 0.3
   playOnStart: 1
+  forceMute: 0
   fadeInSeconds: 1.5
   persistAcrossScenes: 1
 --- !u!82 &489318146
@@ -6514,7 +6515,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   target: {fileID: 2717251238726242545}
-  smoothSpeed: 0.3
+  followLerpSpeed: 14
 --- !u!20 &519420031
 Camera:
   m_ObjectHideFlags: 0
@@ -6813,6 +6814,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderboardUI
   canvas: {fileID: 813477737}
+  delayBeforeShow: 1.6
 --- !u!114 &621498085
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7039,12 +7041,12 @@ PrefabInstance:
     - target: {fileID: 3736421190891318409, guid: bc002a48f603f5141bcd078843b2d1d2,
         type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3736421190891318409, guid: bc002a48f603f5141bcd078843b2d1d2,
         type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3736421190891318409, guid: bc002a48f603f5141bcd078843b2d1d2,
         type: 3}
@@ -7921,6 +7923,47 @@ MonoBehaviour:
   - {fileID: 976133113}
   - {fileID: 1941106715}
   freezeTimeOnHome: 1
+  menuMusic: {fileID: 0}
+  gameMusic: {fileID: 0}
+  musicFadeSeconds: 0.6
+  countdownLabel: {fileID: 0}
+  autoStartSeconds: 30
+  digitalClockFormat: 1
+  countdownFormat: Starting in {0}s
+  useSegmentClock: 1
+  segmentClockPosition: {x: 360, y: -40}
+  segmentDigitWidth: 56
+  segmentDigitHeight: 96
+  segmentThickness: 14
+  segmentSlant: 6
+  autoLabelFontSize: 96
+  autoLabelAnchoredPosition: {x: 0, y: -180}
+  autoLabelSizeDelta: {x: 900, y: 200}
+  useVertexGradient: 1
+  gradientTopLighten: 0.35
+  gradientBottomDarken: 0.3
+  outlineColor: {r: 0.04, g: 0.05, b: 0.1, a: 1}
+  outlineMin: 0.18
+  outlineMax: 0.26
+  outlinePulseSpeed: 1.2
+  useDropShadow: 1
+  shadowColor: {r: 0, g: 0, b: 0, a: 0.55}
+  shadowOffset: {x: 0.6, y: -0.6}
+  shadowDilate: 0.2
+  shadowSoftness: 0.45
+  characterSpacing: 8
+  colorFull: {r: 0.55, g: 0.85, b: 1, a: 1}
+  colorMid: {r: 1, g: 0.78, b: 0.3, a: 1}
+  colorLow: {r: 1, g: 0.32, b: 0.32, a: 1}
+  lowThreshold: 5
+  midThreshold: 15
+  popPeakScale: 1.12
+  popDuration: 0.35
+  tickShakeAmount: 3.5
+  tickShakeDuration: 0.22
+  tickShakeLowBonus: 2.5
+  entranceDuration: 0.5
+  entranceFromScale: 0.7
 --- !u!1 &1800613602
 GameObject:
   m_ObjectHideFlags: 0
@@ -8570,6 +8613,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   movementSpeed: 10
   IsJetpacking: 0
+  autoBounceForce: 12
+  groundProbeDistance: 0.15
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!114 &1515263522444550698
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8586,6 +8634,17 @@ MonoBehaviour:
   countdownTmp: {fileID: 0}
   countdownText: {fileID: 0}
   countdownFormat: 'Auto-start: {0}s'
+  useSegmentClock: 1
+  segmentClockPosition: {x: 360, y: 220}
+  segmentDigitWidth: 44
+  segmentDigitHeight: 76
+  segmentThickness: 11
+  segmentSlant: 6
+  colorFull: {r: 0.58, g: 0.08, b: 0.08, a: 1}
+  colorMid: {r: 0.75, g: 0.14, b: 0.14, a: 1}
+  colorLow: {r: 0.95, g: 0.22, b: 0.22, a: 1}
+  lowThreshold: 5
+  midThreshold: 15
 --- !u!1 &1758053376319232375
 GameObject:
   m_ObjectHideFlags: 0
@@ -8620,8 +8679,8 @@ Transform:
   m_GameObject: {fileID: 1758053376319232375}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.1, y: -1.5, z: -6.7}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0.1, y: -0.8, z: -6.7}
+  m_LocalScale: {x: 1.5, y: 1.5, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5322317003052963330}
