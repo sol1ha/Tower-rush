@@ -59,15 +59,15 @@ public class HomeScreen : MonoBehaviour
     public Vector2 autoLabelAnchoredPosition = new Vector2(360f, -40f);
     public Vector2 autoLabelSizeDelta = new Vector2(360f, 110f);
 
-    [Header("In-game play-time clock")]
-    [Tooltip("If true, auto-spawns a 7-segment clock that ticks UP from 00:00 during gameplay (in the bottom-right by default).")]
-    public bool spawnPlayTimeClock = true;
-    public PlayTimeClock.Corner playTimeClockCorner = PlayTimeClock.Corner.BottomRight;
+    [Header("In-game sand-jar clock")]
+    [Tooltip("If true, auto-spawns an hourglass clock that drains over 1 minute and ramps difficulty (more bullets) every minute.")]
+    public bool spawnSandJarClock = true;
+    public SandJarClock.Corner sandJarCorner = SandJarClock.Corner.BottomRight;
 
     private SegmentDigitalClock segmentClock;
     private RectTransform segmentClockRect;
     private Vector2 segmentClockBasePos;
-    private PlayTimeClock playTimeClock;
+    private SandJarClock sandJarClock;
 
     [Header("Countdown design")]
     public bool useVertexGradient = true;
@@ -249,8 +249,8 @@ public class HomeScreen : MonoBehaviour
             segmentClock.SetTotalSeconds(Mathf.CeilToInt(autoStartSeconds));
         }
 
-        // Hide the in-game play-time clock while we're back on the home menu.
-        if (playTimeClock != null) playTimeClock.Hide();
+        // Hide the in-game sand-jar clock while we're back on the home menu.
+        if (sandJarClock != null) sandJarClock.Hide();
 
         try { if (gameMusic != null) gameMusic.Stop(musicFadeSeconds); } catch { }
         try { if (menuMusic != null) menuMusic.Play(); } catch { }
@@ -294,17 +294,17 @@ public class HomeScreen : MonoBehaviour
         if (GameManager.instance != null) GameManager.instance.play = true;
         else GameManager.StartGame();
 
-        // Spawn the in-game play-time clock (counts UP from 00:00).
-        if (spawnPlayTimeClock)
+        // Spawn the in-game sand-jar clock (drains over 1 min; bumps bullet difficulty per minute).
+        if (spawnSandJarClock)
         {
-            if (playTimeClock == null)
+            if (sandJarClock == null)
             {
-                var clockGo = new GameObject("PlayTimeClockHost");
-                playTimeClock = clockGo.AddComponent<PlayTimeClock>();
-                playTimeClock.anchorCorner = playTimeClockCorner;
+                var clockGo = new GameObject("SandJarClockHost");
+                sandJarClock = clockGo.AddComponent<SandJarClock>();
+                sandJarClock.anchorCorner = sandJarCorner;
             }
-            playTimeClock.ResetTime();
-            playTimeClock.Show();
+            sandJarClock.ResetTime();
+            sandJarClock.Show();
         }
 
         try { if (menuMusic != null) menuMusic.Stop(musicFadeSeconds); } catch { }

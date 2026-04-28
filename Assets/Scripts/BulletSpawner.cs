@@ -40,10 +40,48 @@ public class BulletSpawner : MonoBehaviour
     private bool waveQueued;
     private bool nextWaveFromLeft;
 
+    // Difficulty mode: 0 = normal, 1 = hard, 2 = extreme. Set by SandJarClock.
+    private int difficultyLevel = 0;
+    // Cached base values so each difficulty step scales from the originals,
+    // not from the previously-modified values.
+    private float baseMinInterval;
+    private float baseMaxInterval;
+    private int baseBulletsPerWave;
+
     void Start()
     {
         cam = Camera.main;
         nextWaveTime = Time.time + initialDelay;
+        baseMinInterval = minInterval;
+        baseMaxInterval = maxInterval;
+        baseBulletsPerWave = bulletsPerWave;
+    }
+
+    /// <summary>
+    /// Bumps wave frequency and bullet count based on difficulty level.
+    /// Called from SandJarClock at every minute boundary.
+    /// </summary>
+    public void SetDifficultyLevel(int level)
+    {
+        difficultyLevel = Mathf.Max(0, level);
+        switch (difficultyLevel)
+        {
+            case 0: // normal
+                minInterval = baseMinInterval;
+                maxInterval = baseMaxInterval;
+                bulletsPerWave = baseBulletsPerWave;
+                break;
+            case 1: // hard
+                minInterval = baseMinInterval * 0.5f;
+                maxInterval = baseMaxInterval * 0.5f;
+                bulletsPerWave = baseBulletsPerWave + 2;
+                break;
+            default: // extreme (2+)
+                minInterval = baseMinInterval * 0.33f;
+                maxInterval = baseMaxInterval * 0.33f;
+                bulletsPerWave = baseBulletsPerWave + 4;
+                break;
+        }
     }
 
     void Update()
