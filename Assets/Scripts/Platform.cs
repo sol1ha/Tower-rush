@@ -7,8 +7,10 @@ public class Platform : MonoBehaviour
 {
     [SerializeField] AudioSource bulletbounce = null;
     public float jumpForce = 10f;
-    [Tooltip("If true, this is a boost platform that speeds up the laser while the player is airborne")]
+    [Tooltip("If true, this is a boost platform that launches the player higher and also speeds up the laser.")]
     public bool isBoostPlatform = false;
+    [Tooltip("Multiplier applied to jumpForce when this is a boost platform. 2 = twice as high.")]
+    public float boostJumpMultiplier = 2.2f;
     public bool destroy;
     private Transform mainCamera;
     private static Laser_kill laserRef;
@@ -110,7 +112,8 @@ public class Platform : MonoBehaviour
         // Bounce on any valid contact — no X-range or side-graze early-out, so
         // a player landing on the edge of a platform still bounces normally.
         Vector2 velocity = rb.linearVelocity;
-        velocity.y = jumpForce;
+        float bounceForce = isBoostPlatform ? jumpForce * boostJumpMultiplier : jumpForce;
+        velocity.y = bounceForce;
         rb.linearVelocity = velocity;
         bouncedThisFrame = true;
 
