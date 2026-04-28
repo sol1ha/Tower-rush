@@ -215,8 +215,8 @@ public class LevelGenerator : MonoBehaviour
     }
 
     // Spawns a boost platform that visually matches the regular platform exactly
-    // (same prefab, same sprite color, same size, same collider). It just gets
-    // isBoostPlatform=true on the Platform component for the boost behavior.
+    // (same prefab, same sprite color, same size, same collider). Adds a small
+    // floating gold up-arrow above it so the player can tell it's a boost.
     void SpawnBoostFromBase(Vector3 pos)
     {
         GameObject p = Instantiate(platformPrefab, pos, Quaternion.identity, transform);
@@ -224,6 +224,10 @@ public class LevelGenerator : MonoBehaviour
 
         var plat = p.GetComponent<Platform>();
         if (plat != null) plat.isBoostPlatform = true;
+
+        // Floating chevron / arrow indicator hovering above the platform so
+        // the boost is telegraphed clearly without changing the platform itself.
+        p.AddComponent<BoostIndicator>();
     }
 
     // Spawns the special "riser" platform — uses its own prefab (drag your
