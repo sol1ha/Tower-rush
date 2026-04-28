@@ -11,9 +11,9 @@ public class SegmentDigitalClock : MonoBehaviour
 {
     [Header("Look")]
     [Tooltip("Color of lit segments.")]
-    public Color onColor = new Color(0.18f, 0.40f, 1.0f, 1f);
+    public Color onColor = new Color(0.58f, 0.08f, 0.08f, 1f); // dark red default
     [Tooltip("Color of unlit (off) segments. Set alpha to 0 to hide them.")]
-    public Color offColor = new Color(0.18f, 0.40f, 1.0f, 0.10f);
+    public Color offColor = new Color(0.58f, 0.08f, 0.08f, 0.10f);
 
     [Header("Digit dimensions")]
     public float digitWidth = 56f;
@@ -55,10 +55,11 @@ public class SegmentDigitalClock : MonoBehaviour
         0b1101111  // 9 — top, topL, topR, mid, botR, bot
     };
 
-    void Awake()
-    {
-        if (digits == null) Build();
-    }
+    // Note: NO Awake. We deliberately avoid building segments before the
+    // creator (e.g. HomeScreen.BuildSegmentClock) has had a chance to set
+    // digitWidth/Height/Thickness/Slant/onColor/offColor. Build() will be
+    // called lazily on the first SetTotalSeconds invocation, by which time
+    // all configuration is in place.
 
     void Build()
     {
