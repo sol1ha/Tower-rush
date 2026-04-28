@@ -64,12 +64,15 @@ public class LevelGenerator : MonoBehaviour
     public int coinEach;
     [Tooltip("Spawn a riser (rising-magic) platform every N platforms. 0 = never.")]
     public int riserEach = 12;
+    [Tooltip("Spawn a 'ghost' (barely-visible) platform every N platforms. 0 = never.")]
+    public int ghostEach = 11;
     public Vector3 coinOffset;
     [Tooltip("Vertical offset (in world units) above the platform's center where each spike is placed.")]
     public float spikeYOffset = 1.2f;
     [Tooltip("Horizontal spread of spikes across a platform. 1 = full collider width, 0.85 = inset 15% so they don't hang off the edge.")]
     [Range(0.3f, 1.0f)] public float spikeSpreadRatio = 0.7f;
     private int riserCounter = 0;
+    private int ghostCounter = 0;
     private int boostCounter = 0;
     private int coinCounter = 5;
 
@@ -124,9 +127,15 @@ public class LevelGenerator : MonoBehaviour
                 boostCounter++;
                 coinCounter++;
                 riserCounter++;
+                ghostCounter++;
                 if (riserPrefab != null && riserEach > 0 && riserCounter % riserEach == 0)
                 {
                     SpawnRiser(spawnPosition);
+                    lastSimplePos = spawnPosition;
+                }
+                else if (ghostEach > 0 && ghostCounter % ghostEach == 0)
+                {
+                    SpawnGhostFromBase(spawnPosition);
                     lastSimplePos = spawnPosition;
                 }
                 else if (boostCounter % boostEach == 0)
@@ -182,9 +191,14 @@ public class LevelGenerator : MonoBehaviour
                 boostCounter++;
                 coinCounter++;
                 riserCounter++;
+                ghostCounter++;
                 if (riserPrefab != null && riserEach > 0 && riserCounter % riserEach == 0)
                 {
                     SpawnRiser(spawnPosition);
+                }
+                else if (ghostEach > 0 && ghostCounter % ghostEach == 0)
+                {
+                    SpawnGhostFromBase(spawnPosition);
                 }
                 else if (boostCounter % boostEach == 0)
                 {
@@ -228,6 +242,16 @@ public class LevelGenerator : MonoBehaviour
         // Floating chevron / arrow indicator hovering above the platform so
         // the boost is telegraphed clearly without changing the platform itself.
         p.AddComponent<BoostIndicator>();
+    }
+
+    // Spawns a 'ghost' platform — same regular prefab and full collision, but
+    // its SpriteRenderer alpha is dropped to a low value with a slow shimmer so
+    // the player has to look carefully to spot it.
+    void SpawnGhostFromBase(Vector3 pos)
+    {
+        GameObject p = Instantiate(platformPrefab, pos, Quaternion.identity, transform);
+        platformCount++;
+        p.AddComponent<GhostPlatformVisual>();
     }
 
     // Spawns the special "riser" platform — uses its own prefab (drag your
