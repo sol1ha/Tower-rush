@@ -306,34 +306,19 @@ public class LevelGenerator : MonoBehaviour
     {
         if (spikePrefab == null) return;
 
-        // Use the COLLIDER's local size + offset for placement so spikes sit on
-        // the actual platform surface, not floating above the sprite top.
-        BoxCollider2D bc = platform.GetComponent<BoxCollider2D>();
-        float widthForSpacing;
-        float topY;
-        if (bc != null)
-        {
-            widthForSpacing = bc.size.x;
-            topY = platformPos.y + bc.offset.y + bc.size.y * 0.5f;
-        }
-        else
-        {
-            SpriteRenderer sr = platform.GetComponent<SpriteRenderer>();
-            widthForSpacing = sr != null ? sr.bounds.size.x : 1.5f;
-            topY = sr != null ? sr.bounds.max.y : platformPos.y + 0.2f;
-        }
-
-        // Spawn 2 or 3 spikes, spread evenly across the platform's collider.
+        // Spawn 2 or 3 spikes, spread evenly across the platform
         int spikeCount = Random.Range(2, 4); // 2 or 3
-        // Inset the spike spawn area a little so spikes don't hang off the edge.
-        float usable = widthForSpacing * 0.85f;
-        float spacing = usable / (spikeCount + 1);
-        float startX = platformPos.x - usable * 0.5f;
+        SpriteRenderer sr = platform.GetComponent<SpriteRenderer>();
+        float platformWidth = sr != null ? sr.bounds.size.x : 1.5f;
+        float platformTop = sr != null ? sr.bounds.size.y * 0.5f : 0.2f;
+
+        float spacing = platformWidth / (spikeCount + 1);
+        float startX = platformPos.x - platformWidth * 0.5f;
 
         for (int i = 0; i < spikeCount; i++)
         {
             float x = startX + spacing * (i + 1);
-            Vector3 spikePos = new Vector3(x, topY, 0f);
+            Vector3 spikePos = new Vector3(x, platformPos.y + platformTop, 0f);
             GameObject spike = Instantiate(spikePrefab, spikePos, Quaternion.identity);
             spike.transform.SetParent(platform.transform);
         }

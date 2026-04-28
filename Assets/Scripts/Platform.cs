@@ -7,28 +7,16 @@ public class Platform : MonoBehaviour
 {
     [SerializeField] AudioSource bulletbounce = null;
     public float jumpForce = 10f;
-    [Tooltip("If true, this platform CARRIES the player upward for boostRiseDuration seconds when landed on (rising-platform mechanic).")]
+    [Tooltip("If true, this is a boost platform that launches the player higher and also speeds up the laser.")]
     public bool isBoostPlatform = false;
-
-    [Header("Boost (rising-platform) settings")]
-    [Tooltip("Seconds the platform carries the player upward.")]
-    public float boostRiseDuration = 3f;
-    [Tooltip("Speed (units/sec) at which the platform — and the player riding it — rise.")]
-    public float boostRiseSpeed = 8f;
-    [Tooltip("Final upward velocity given to the player when the rise ends.")]
-    public float boostRiseEndKick = 10f;
-
+    [Tooltip("Multiplier applied to jumpForce when this is a boost platform. 2 = twice as high.")]
+    public float boostJumpMultiplier = 2.2f;
     public bool destroy;
     private Transform mainCamera;
     private static Laser_kill laserRef;
 
     private bool bouncedThisFrame = false;
     private Collider2D ownCollider;
-
-    // Rising-platform state
-    private bool isRising;
-    private float riseRemaining;
-    private Rigidbody2D ridingPlayerRb;
 
     private void Awake()
     {
@@ -66,48 +54,6 @@ public class Platform : MonoBehaviour
         if (destroy && mainCamera != null && mainCamera.position.y - 10 > transform.position.y)
         {
             Destroy(gameObject);
-        }
-
-        if (isRising) UpdateRise();
-    }
-
-    void UpdateRise()
-    {
-        riseRemaining -= Time.deltaTime;
-        float step = boostRiseSpeed * Time.deltaTime;
-
-        // Lift the platform itself.
-        Vector3 p = transform.position;
-        p.y += step;
-        transform.position = p;
-
-        // Carry the player along — set their velocity.y to match the rise so
-        // gravity can't pull them off, and snap their position by the same step.
-        if (ridingPlayerRb != null)
-        {
-            Vector3 pp = ridingPlayerRb.transform.position;
-            pp.y += step;
-            ridingPlayerRb.transform.position = pp;
-
-            Vector2 v = ridingPlayerRb.linearVelocity;
-            v.y = boostRiseSpeed;
-            ridingPlayerRb.linearVelocity = v;
-        }
-
-        if (riseRemaining <= 0f)
-        {
-            isRising = false;
-            // Final kick so the player keeps moving up briefly when the rise ends.
-            if (ridingPlayerRb != null)
-            {
-                Vector2 v = ridingPlayerRb.linearVelocity;
-                v.y = Mathf.Max(v.y, boostRiseEndKick);
-                ridingPlayerRb.linearVelocity = v;
-            }
-            ridingPlayerRb = null;
-
-            // Speed reset on the laser (was sped up while boost was active).
-            if (laserRef != null) laserRef.ResetSpeed();
         }
     }
 
@@ -163,34 +109,21 @@ public class Platform : MonoBehaviour
         Player player = collision.collider.GetComponentInParent<Player>();
         if (player != null && player.IsJetpacking) return;
 
-        // Boost platform: become a rising platform that carries the player up.
-        if (isBoostPlatform)
-        {
-            if (!isRising)
-            {
-                isRising = true;
-                riseRemaining = boostRiseDuration;
-                ridingPlayerRb = rb;
-                // Zero vertical velocity so the rise feels like an elevator
-                // start, not a bounce-then-rise.
-                Vector2 zeroV = rb.linearVelocity;
-                zeroV.y = 0f;
-                rb.linearVelocity = zeroV;
-                if (laserRef != null) laserRef.BoostSpeed();
-                if (bulletbounce != null && bulletbounce.enabled && bulletbounce.clip != null)
-                    bulletbounce.PlayOneShot(bulletbounce.clip);
-            }
-            bouncedThisFrame = true;
-            return;
-        }
-
-        // Regular platform: classic bounce.
+        // Bounce on any valid contact — no X-range or side-graze early-out, so
+        // a player landing on the edge of a platform still bounces normally.
         Vector2 velocity = rb.linearVelocity;
-        velocity.y = jumpForce;
+        float bounceForce = isBoostPlatform ? jumpForce * boostJumpMultiplier : jumpForce;
+        velocity.y = bounceForce;
         rb.linearVelocity = velocity;
         bouncedThisFrame = true;
 
-        if (laserRef != null) laserRef.ResetSpeed();
+        if (laserRef != null)
+        {
+            if (isBoostPlatform)
+                laserRef.BoostSpeed();
+            else
+                laserRef.ResetSpeed();
+        }
 
         if (bulletbounce != null && bulletbounce.enabled && bulletbounce.clip != null)
             bulletbounce.PlayOneShot(bulletbounce.clip);
