@@ -59,9 +59,15 @@ public class HomeScreen : MonoBehaviour
     public Vector2 autoLabelAnchoredPosition = new Vector2(360f, -40f);
     public Vector2 autoLabelSizeDelta = new Vector2(360f, 110f);
 
+    [Header("In-game play-time clock")]
+    [Tooltip("If true, auto-spawns a 7-segment clock that ticks UP from 00:00 during gameplay (in the bottom-right by default).")]
+    public bool spawnPlayTimeClock = true;
+    public PlayTimeClock.Corner playTimeClockCorner = PlayTimeClock.Corner.BottomRight;
+
     private SegmentDigitalClock segmentClock;
     private RectTransform segmentClockRect;
     private Vector2 segmentClockBasePos;
+    private PlayTimeClock playTimeClock;
 
     [Header("Countdown design")]
     public bool useVertexGradient = true;
@@ -243,6 +249,9 @@ public class HomeScreen : MonoBehaviour
             segmentClock.SetTotalSeconds(Mathf.CeilToInt(autoStartSeconds));
         }
 
+        // Hide the in-game play-time clock while we're back on the home menu.
+        if (playTimeClock != null) playTimeClock.Hide();
+
         try { if (gameMusic != null) gameMusic.Stop(musicFadeSeconds); } catch { }
         try { if (menuMusic != null) menuMusic.Play(); } catch { }
     }
@@ -284,6 +293,19 @@ public class HomeScreen : MonoBehaviour
         // GameManager.Awake() forces play=false, so this must come after the loop.
         if (GameManager.instance != null) GameManager.instance.play = true;
         else GameManager.StartGame();
+
+        // Spawn the in-game play-time clock (counts UP from 00:00).
+        if (spawnPlayTimeClock)
+        {
+            if (playTimeClock == null)
+            {
+                var clockGo = new GameObject("PlayTimeClockHost");
+                playTimeClock = clockGo.AddComponent<PlayTimeClock>();
+                playTimeClock.anchorCorner = playTimeClockCorner;
+            }
+            playTimeClock.ResetTime();
+            playTimeClock.Show();
+        }
 
         try { if (menuMusic != null) menuMusic.Stop(musicFadeSeconds); } catch { }
         try { if (gameMusic != null) gameMusic.Play(); } catch { }
