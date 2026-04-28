@@ -31,7 +31,7 @@ public class HomeScreen : MonoBehaviour
 
     // ---------- Designed countdown built into HomeScreen ----------
     [Header("Countdown — drag YOUR TMP text here (optional)")]
-    [Tooltip("Drag the TMP text you created in Unity. If left empty, one is auto-created inside the home panel's canvas.")]
+    [Tooltip("Drag the TMP text you created in Unity. If left empty AND useSegmentClock is OFF, a basic TMP label is auto-created instead.")]
     public TMP_Text countdownLabel;
     [Tooltip("Seconds before the menu auto-starts.")]
     public float autoStartSeconds = 30f;
@@ -40,10 +40,28 @@ public class HomeScreen : MonoBehaviour
     [Tooltip("Format string used when 'digitalClockFormat' is OFF. {0} = seconds remaining.")]
     public string countdownFormat = "{0}s";
 
-    [Header("Auto-create (only used when 'Countdown Label' is empty)")]
+    [Header("Digital 7-segment clock (overrides TMP when ON)")]
+    [Tooltip("If true, builds a real 7-segment LCD clock from rectangle Images — looks like a digital clock without needing a special font.")]
+    public bool useSegmentClock = true;
+    [Tooltip("Position of the segment clock on the canvas (relative to centre).")]
+    public Vector2 segmentClockPosition = new Vector2(360f, -40f);
+    [Tooltip("Width of each segment digit (in canvas units).")]
+    public float segmentDigitWidth = 56f;
+    [Tooltip("Height of each segment digit.")]
+    public float segmentDigitHeight = 96f;
+    [Tooltip("How thick each segment bar is.")]
+    public float segmentThickness = 14f;
+    [Tooltip("Italic-style slant in degrees (0 = upright, 6-10 = classic LCD).")]
+    public float segmentSlant = 6f;
+
+    [Header("Auto-create TMP label (only if useSegmentClock is OFF and Countdown Label empty)")]
     public int autoLabelFontSize = 60;
-    public Vector2 autoLabelAnchoredPosition = new Vector2(180f, 0f);
+    public Vector2 autoLabelAnchoredPosition = new Vector2(360f, -40f);
     public Vector2 autoLabelSizeDelta = new Vector2(360f, 110f);
+
+    private SegmentDigitalClock segmentClock;
+    private RectTransform segmentClockRect;
+    private Vector2 segmentClockBasePos;
 
     [Header("Countdown design")]
     public bool useVertexGradient = true;
@@ -96,15 +114,53 @@ public class HomeScreen : MonoBehaviour
             playButton.onClick.AddListener(StartGame);
         }
 
-        if (countdownLabel == null) AutoCreateCountdownLabel();
+        countdownRemaining = autoStartSeconds;
 
-        if (countdownLabel != null)
+        if (useSegmentClock)
         {
-            countdownRect = countdownLabel.rectTransform;
-            countdownBasePos = countdownRect.anchoredPosition;
-            countdownRemaining = autoStartSeconds;
-            StyleCountdown();
+            BuildSegmentClock();
         }
+        else
+        {
+            if (countdownLabel == null) AutoCreateCountdownLabel();
+            if (countdownLabel != null)
+            {
+                countdownRect = countdownLabel.rectTransform;
+                countdownBasePos = countdownRect.anchoredPosition;
+                StyleCountdown();
+            }
+        }
+    }
+
+    void BuildSegmentClock()
+    {
+        Canvas canvas = null;
+        if (homePanel != null) canvas = homePanel.GetComponentInParent<Canvas>();
+        if (canvas == null) canvas = GetComponentInParent<Canvas>();
+        if (canvas == null) canvas = FindAnyObjectByType<Canvas>();
+        if (canvas == null) return;
+
+        Transform parent = homePanel != null ? homePanel.transform : (Transform)canvas.transform;
+
+        var go = new GameObject("SegmentClock", typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+
+        segmentClockRect = (RectTransform)go.transform;
+        segmentClockRect.anchorMin = new Vector2(0.5f, 0.5f);
+        segmentClockRect.anchorMax = new Vector2(0.5f, 0.5f);
+        segmentClockRect.pivot = new Vector2(0.5f, 0.5f);
+        // Width: 4 digits + colon + spacing. Ballpark, the display centers itself.
+        segmentClockRect.sizeDelta = new Vector2(segmentDigitWidth * 4 + 80f, segmentDigitHeight * 1.2f);
+        segmentClockRect.anchoredPosition = segmentClockPosition;
+        segmentClockBasePos = segmentClockPosition;
+
+        segmentClock = go.AddComponent<SegmentDigitalClock>();
+        segmentClock.digitWidth = segmentDigitWidth;
+        segmentClock.digitHeight = segmentDigitHeight;
+        segmentClock.segmentThickness = segmentThickness;
+        segmentClock.slantDegrees = segmentSlant;
+        segmentClock.onColor = colorFull;
+        segmentClock.SetTotalSeconds(Mathf.CeilToInt(autoStartSeconds));
     }
 
     void AutoCreateCountdownLabel()
@@ -170,16 +226,21 @@ public class HomeScreen : MonoBehaviour
         if (GameManager.instance != null) GameManager.instance.play = false;
 
         // Reset and show the countdown when the menu reappears.
+        countdownRemaining = autoStartSeconds;
+        countdownFired = false;
+        lastShownSecond = -1;
+        popTimer = 999f;
+        shakeTimer = 999f;
+        entranceTimer = 0f;
         if (countdownLabel != null)
         {
             countdownLabel.gameObject.SetActive(true);
-            countdownRemaining = autoStartSeconds;
-            countdownFired = false;
-            lastShownSecond = -1;
-            popTimer = 999f;
-            shakeTimer = 999f;
-            entranceTimer = 0f;
             StyleCountdown();
+        }
+        if (segmentClock != null)
+        {
+            segmentClock.gameObject.SetActive(true);
+            segmentClock.SetTotalSeconds(Mathf.CeilToInt(autoStartSeconds));
         }
 
         try { if (gameMusic != null) gameMusic.Stop(musicFadeSeconds); } catch { }
@@ -192,10 +253,10 @@ public class HomeScreen : MonoBehaviour
 
         if (homePanel != null) homePanel.SetActive(false);
 
-        // Hide the countdown label as we leave the menu.
+        // Hide the countdown label / segment clock as we leave the menu.
+        countdownFired = true;
         if (countdownLabel != null)
         {
-            countdownFired = true;
             if (countdownRect != null)
             {
                 countdownRect.localScale = Vector3.one;
@@ -203,6 +264,13 @@ public class HomeScreen : MonoBehaviour
                 countdownRect.localRotation = Quaternion.identity;
             }
             countdownLabel.gameObject.SetActive(false);
+        }
+        if (segmentClock != null)
+        {
+            segmentClockRect.localScale = Vector3.one;
+            segmentClockRect.anchoredPosition = segmentClockBasePos;
+            segmentClockRect.localRotation = Quaternion.identity;
+            segmentClock.gameObject.SetActive(false);
         }
 
         // Activate gameplay objects FIRST so GameManager (often listed in
@@ -223,7 +291,8 @@ public class HomeScreen : MonoBehaviour
 
     void Update()
     {
-        if (countdownLabel == null || countdownFired) return;
+        if (countdownFired) return;
+        if (countdownLabel == null && segmentClock == null) return;
         if (homePanel != null && !homePanel.activeInHierarchy) return;
 
         float dt = Time.unscaledDeltaTime;
@@ -283,11 +352,7 @@ public class HomeScreen : MonoBehaviour
 
     void UpdateCountdownVisuals()
     {
-        if (!styledOnce) StyleCountdown();
-
-        countdownLabel.text = FormatCountdownText(lastShownSecond);
-
-        // ---- color drift ----
+        // ---- color drift (used by both modes) ----
         Color baseColor;
         if (countdownRemaining <= lowThreshold)
         {
@@ -304,6 +369,42 @@ public class HomeScreen : MonoBehaviour
             baseColor = colorFull;
         }
 
+        // Tick pop / shake values (shared)
+        float entrance = Mathf.Clamp01(entranceTimer / Mathf.Max(0.0001f, entranceDuration));
+        float entranceScale = Mathf.LerpUnclamped(entranceFromScale, 1f, EaseOutBack(entrance));
+        float popProgress = Mathf.Clamp01(popTimer / Mathf.Max(0.0001f, popDuration));
+        float popScale = Mathf.LerpUnclamped(popPeakScale, 1f, EaseOutBack(popProgress));
+        float finalScale = entranceScale * popScale;
+        float shakeProgress = Mathf.Clamp01(shakeTimer / Mathf.Max(0.0001f, tickShakeDuration));
+        float shakeStrength = 1f - shakeProgress;
+        float amp = tickShakeAmount + (countdownRemaining <= lowThreshold ? tickShakeLowBonus : 0f);
+        Vector2 shake = Vector2.zero;
+        if (shakeStrength > 0f)
+        {
+            float n1 = Mathf.PerlinNoise(Time.unscaledTime * 40f, 0f) - 0.5f;
+            float n2 = Mathf.PerlinNoise(0f, Time.unscaledTime * 40f) - 0.5f;
+            shake = new Vector2(n1, n2) * 2f * amp * shakeStrength;
+        }
+
+        // ---- segment clock path ----
+        if (segmentClock != null && segmentClockRect != null)
+        {
+            segmentClock.SetTotalSeconds(lastShownSecond);
+            segmentClock.SetColor(baseColor);
+            // Blink the colon every other second.
+            segmentClock.SetColonBlink(((int)(Time.unscaledTime * 2f)) % 2 == 0);
+            segmentClockRect.localScale = new Vector3(finalScale, finalScale, 1f);
+            segmentClockRect.localRotation = Quaternion.identity;
+            segmentClockRect.anchoredPosition = segmentClockBasePos + shake;
+            return;
+        }
+
+        // ---- TMP label path ----
+        if (countdownLabel == null) return;
+        if (!styledOnce) StyleCountdown();
+
+        countdownLabel.text = FormatCountdownText(lastShownSecond);
+
         if (useVertexGradient)
         {
             Color top = Color.Lerp(baseColor, Color.white, gradientTopLighten);
@@ -318,34 +419,12 @@ public class HomeScreen : MonoBehaviour
             countdownLabel.color = baseColor;
         }
 
-        // ---- gentle outline glow pulse ----
         float pulse = Mathf.Sin(Time.unscaledTime * outlinePulseSpeed * Mathf.PI) * 0.5f + 0.5f;
         countdownLabel.outlineWidth = Mathf.Lerp(outlineMin, outlineMax, pulse);
 
         if (countdownRect == null) return;
-
-        // ---- scale: entrance + tick pop ----
-        float entrance = Mathf.Clamp01(entranceTimer / Mathf.Max(0.0001f, entranceDuration));
-        float entranceScale = Mathf.LerpUnclamped(entranceFromScale, 1f, EaseOutBack(entrance));
-
-        float popProgress = Mathf.Clamp01(popTimer / Mathf.Max(0.0001f, popDuration));
-        float popScale = Mathf.LerpUnclamped(popPeakScale, 1f, EaseOutBack(popProgress));
-
-        float finalScale = entranceScale * popScale;
         countdownRect.localScale = new Vector3(finalScale, finalScale, 1f);
         countdownRect.localRotation = Quaternion.identity;
-
-        // ---- brief shake right after each tick (decays fast) ----
-        float shakeProgress = Mathf.Clamp01(shakeTimer / Mathf.Max(0.0001f, tickShakeDuration));
-        float shakeStrength = 1f - shakeProgress;
-        float amp = tickShakeAmount + (countdownRemaining <= lowThreshold ? tickShakeLowBonus : 0f);
-        Vector2 shake = Vector2.zero;
-        if (shakeStrength > 0f)
-        {
-            float n1 = Mathf.PerlinNoise(Time.unscaledTime * 40f, 0f) - 0.5f;
-            float n2 = Mathf.PerlinNoise(0f, Time.unscaledTime * 40f) - 0.5f;
-            shake = new Vector2(n1, n2) * 2f * amp * shakeStrength;
-        }
         countdownRect.anchoredPosition = countdownBasePos + shake;
     }
 
