@@ -1,7 +1,7 @@
-using UnityEngine;
-using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
 
 public class LeaderboardUI : MonoBehaviour
 {
@@ -10,17 +10,63 @@ public class LeaderboardUI : MonoBehaviour
     [Header("Just assign your Canvas")]
     public Canvas canvas;
 
-    private GameObject leaderboardPanel;
-    private RectTransform panelRect;
-    private Text titleText;
-    private Text personalBestText;
-    private List<RowWidgets> rowWidgets = new List<RowWidgets>();
-    private CanvasGroup panelGroup;
+    [Header("Timing")]
+    [Tooltip("Seconds to wait after the player dies before showing the leaderboard, so the 'You Lost' animation can play first.")]
+    public float delayBeforeShow = 1.6f;
 
-    private static readonly string[] MEDALS = { "★ 1", "● 2", "● 3" };
-    private static readonly Color GOLD   = new Color(1.00f, 0.84f, 0.10f);
-    private static readonly Color SILVER = new Color(0.78f, 0.82f, 0.88f);
-    private static readonly Color BRONZE = new Color(0.85f, 0.55f, 0.25f);
+    // ----- palette inspired by the reference card -----
+    static readonly Color TEAL_BG       = new Color(0.27f, 0.62f, 0.60f, 1f);
+    static readonly Color TEAL_OUTER    = new Color(0.20f, 0.34f, 0.36f, 1f);
+    static readonly Color CARD_WHITE    = new Color(1.00f, 1.00f, 1.00f, 1f);
+    static readonly Color ORANGE        = new Color(0.97f, 0.62f, 0.27f, 1f);
+    static readonly Color ORANGE_LIGHT  = new Color(0.99f, 0.78f, 0.45f, 1f);
+    static readonly Color BROWN_TEXT    = new Color(0.27f, 0.15f, 0.10f, 1f);
+    static readonly Color WHITE_TEXT    = Color.white;
+
+    // ----- runtime layout -----
+    private GameObject root;
+    private GameObject card;
+    private CanvasGroup rootGroup;
+
+    private class PodiumCard
+    {
+        public RectTransform rect;
+        public Image cardBg;
+        public Image avatarRing;
+        public Text avatarLetter;
+        public Text nameText;
+        public Text scoreText;
+        public Image rankBadgeBg;
+        public Text rankBadgeText;
+        public Vector2 baseAnchored;
+        public bool isCurrentPlayer;
+    }
+    private PodiumCard[] podium = new PodiumCard[3];
+
+    private class RowWidgets
+    {
+        public RectTransform rect;
+        public Image rowBg;
+        public Image avatarBg;
+        public Text avatarLetter;
+        public Text rankText;
+        public Text nameText;
+        public Image scoreBadge;
+        public Text scoreText;
+        public Vector2 baseAnchored;
+        public bool isCurrentPlayer;
+    }
+    private List<RowWidgets> bottomRows = new List<RowWidgets>();
+
+    private Sprite roundedCardSprite;
+    private Sprite roundedRowSprite;
+    private Sprite roundedBadgeSprite;
+    private Sprite circleSprite;
+    private Sprite ringSprite;
+
+    private Coroutine entranceCoroutine;
+    private Coroutine pulseCoroutine;
+    private Coroutine deathCoroutine;
 
     private static readonly Dictionary<string, string> FRUIT_DISPLAY = new Dictionary<string, string>()
     {
@@ -29,18 +75,6 @@ public class LeaderboardUI : MonoBehaviour
         {"pear", "R"}, {"strawberry", "S"}, {"watermelon", "W"},
         {"banana", "B"}
     };
-
-    class RowWidgets
-    {
-        public RectTransform rect;
-        public Image background;
-        public Text rank;
-        public Text icon;
-        public Text name;
-        public Text score;
-        public Text coins;
-        public bool isCurrentPlayer;
-    }
 
     void Awake()
     {
@@ -51,11 +85,10 @@ public class LeaderboardUI : MonoBehaviour
     void Start()
     {
         if (Instance != this) return;
-
-        if (canvas == null)
-            canvas = FindAnyObjectByType<Canvas>();
+        if (canvas == null) canvas = FindAnyObjectByType<Canvas>();
         if (canvas == null) return;
 
+        BuildSprites();
         BuildLeaderboardPanel();
         PlayerKillLimit.PlayerKill += OnPlayerDeath;
     }
@@ -65,152 +98,288 @@ public class LeaderboardUI : MonoBehaviour
         PlayerKillLimit.PlayerKill -= OnPlayerDeath;
     }
 
+    // ============================================================ sprites
+    void BuildSprites()
+    {
+        roundedCardSprite  = MakeRoundedRect(256, 256, 32, Color.white);
+        roundedRowSprite   = MakeRoundedRect(256, 64, 18, Color.white);
+        roundedBadgeSprite = MakeRoundedRect(128, 64, 12, Color.white);
+        circleSprite       = MakeCircle(128, Color.white, Color.clear, 0);
+        ringSprite         = MakeCircle(128, Color.white, BROWN_TEXT, 4);
+    }
+
+    Sprite MakeRoundedRect(int w, int h, int r, Color color)
+    {
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Color[] px = new Color[w * h];
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                bool inCorner = false;
+                int cx = x, cy = y;
+                if (x < r && y < r)                 { cx = r - x; cy = r - y; inCorner = true; }
+                else if (x >= w - r && y < r)       { cx = x - (w - r - 1); cy = r - y; inCorner = true; }
+                else if (x < r && y >= h - r)       { cx = r - x; cy = y - (h - r - 1); inCorner = true; }
+                else if (x >= w - r && y >= h - r)  { cx = x - (w - r - 1); cy = y - (h - r - 1); inCorner = true; }
+
+                if (inCorner)
+                {
+                    float d = Mathf.Sqrt(cx * cx + cy * cy);
+                    if (d > r) { px[y * w + x] = Color.clear; continue; }
+                    float alpha = Mathf.Clamp01(r - d);
+                    Color c = color; c.a *= alpha;
+                    px[y * w + x] = c;
+                }
+                else px[y * w + x] = color;
+            }
+        }
+        tex.SetPixels(px); tex.Apply();
+        Sprite s = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(r, r, r, r));
+        return s;
+    }
+
+    Sprite MakeCircle(int diameter, Color fill, Color border, int borderWidth)
+    {
+        Texture2D tex = new Texture2D(diameter, diameter, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Color[] px = new Color[diameter * diameter];
+        float radius = diameter / 2f;
+        for (int y = 0; y < diameter; y++)
+        {
+            for (int x = 0; x < diameter; x++)
+            {
+                float dx = x - radius + 0.5f;
+                float dy = y - radius + 0.5f;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                if (dist > radius) px[y * diameter + x] = Color.clear;
+                else if (borderWidth > 0 && dist > radius - borderWidth) px[y * diameter + x] = border;
+                else px[y * diameter + x] = fill;
+            }
+        }
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, diameter, diameter), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    // ============================================================ layout
+    GameObject MakeGo(string name, Transform parent)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        return go;
+    }
+
+    Image AddImage(GameObject go, Sprite sprite, Color color, bool sliced = true)
+    {
+        var img = go.AddComponent<Image>();
+        img.sprite = sprite;
+        img.color = color;
+        if (sliced && sprite != null && sprite.border != Vector4.zero) img.type = Image.Type.Sliced;
+        return img;
+    }
+
+    Text MakeText(string content, Transform parent, Vector2 pos, Vector2 size, int fontSize, FontStyle style, Color color, TextAnchor anchor = TextAnchor.MiddleCenter)
+    {
+        var go = new GameObject("T_" + content);
+        go.transform.SetParent(parent, false);
+        var rt = go.AddComponent<RectTransform>();
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
+        var t = go.AddComponent<Text>();
+        t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        t.fontSize = fontSize;
+        t.fontStyle = style;
+        t.color = color;
+        t.text = content;
+        t.alignment = anchor;
+        t.horizontalOverflow = HorizontalWrapMode.Overflow;
+        t.verticalOverflow = VerticalWrapMode.Overflow;
+        return t;
+    }
+
     void BuildLeaderboardPanel()
     {
-        leaderboardPanel = new GameObject("LeaderboardPanel");
-        leaderboardPanel.transform.SetParent(canvas.transform, false);
-        panelRect = leaderboardPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = Vector2.zero;
-        panelRect.anchorMax = Vector2.one;
-        panelRect.offsetMin = Vector2.zero;
-        panelRect.offsetMax = Vector2.zero;
+        // ---- root + dim ----
+        root = MakeGo("LeaderboardRoot", canvas.transform);
+        var rRect = (RectTransform)root.transform;
+        rRect.anchorMin = Vector2.zero; rRect.anchorMax = Vector2.one;
+        rRect.offsetMin = rRect.offsetMax = Vector2.zero;
+        var dim = root.AddComponent<Image>();
+        dim.color = new Color(0f, 0f, 0f, 0.55f);
+        rootGroup = root.AddComponent<CanvasGroup>();
 
-        // Full-screen dim background
-        Image dim = leaderboardPanel.AddComponent<Image>();
-        dim.color = new Color(0f, 0f, 0f, 0.65f);
-        panelGroup = leaderboardPanel.AddComponent<CanvasGroup>();
+        // ---- main card ----
+        card = MakeGo("Card", root.transform);
+        var cRect = (RectTransform)card.transform;
+        cRect.anchorMin = cRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cRect.pivot = new Vector2(0.5f, 0.5f);
+        cRect.sizeDelta = new Vector2(620, 880);
+        cRect.anchoredPosition = Vector2.zero;
+        AddImage(card, roundedCardSprite, TEAL_BG);
 
-        // Card container (centered)
-        GameObject card = new GameObject("Card");
-        card.transform.SetParent(leaderboardPanel.transform, false);
-        RectTransform cardRect = card.AddComponent<RectTransform>();
-        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
-        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cardRect.pivot = new Vector2(0.5f, 0.5f);
-        cardRect.sizeDelta = new Vector2(680, 720);
-        cardRect.anchoredPosition = Vector2.zero;
-        Image cardBg = card.AddComponent<Image>();
-        cardBg.color = new Color(0.08f, 0.10f, 0.18f, 0.98f);
+        // outer dark frame (slightly larger behind the card)
+        var frame = MakeGo("Frame", root.transform);
+        var fRect = (RectTransform)frame.transform;
+        fRect.anchorMin = fRect.anchorMax = new Vector2(0.5f, 0.5f);
+        fRect.pivot = new Vector2(0.5f, 0.5f);
+        fRect.sizeDelta = new Vector2(636, 896);
+        fRect.anchoredPosition = Vector2.zero;
+        AddImage(frame, roundedCardSprite, TEAL_OUTER);
+        frame.transform.SetSiblingIndex(card.transform.GetSiblingIndex());
 
-        // Top accent bar (gold)
-        GameObject accent = new GameObject("Accent");
-        accent.transform.SetParent(card.transform, false);
-        RectTransform accentRect = accent.AddComponent<RectTransform>();
-        accentRect.anchorMin = new Vector2(0f, 1f);
-        accentRect.anchorMax = new Vector2(1f, 1f);
-        accentRect.pivot = new Vector2(0.5f, 1f);
-        accentRect.sizeDelta = new Vector2(0, 8);
-        accentRect.anchoredPosition = Vector2.zero;
-        accent.AddComponent<Image>().color = GOLD;
+        // ---- title ----
+        MakeText("•  LEADERBOARD  •", card.transform,
+            new Vector2(0, 380), new Vector2(580, 60),
+            34, FontStyle.Bold, WHITE_TEXT);
 
-        // Title
-        titleText = CreateText("★  LEADERBOARD  ★", card.transform,
-            new Vector2(0, 320), 44, FontStyle.Bold, GOLD);
-        titleText.rectTransform.sizeDelta = new Vector2(600, 60);
+        // ---- top 3 podium ----
+        BuildPodium();
 
-        // Subtitle / personal best
-        personalBestText = CreateText("", card.transform,
-            new Vector2(0, 270), 22, FontStyle.Bold, new Color(0.85f, 0.92f, 1f));
-        personalBestText.rectTransform.sizeDelta = new Vector2(600, 36);
-
-        // Header row
-        float headerY = 220;
-        Color headerCol = new Color(0.6f, 0.7f, 0.85f);
-        CreateText("#",      card.transform, new Vector2(-260, headerY), 16, FontStyle.Bold, headerCol);
-        CreateText("ICON",   card.transform, new Vector2(-180, headerY), 16, FontStyle.Bold, headerCol);
-        CreateText("PLAYER", card.transform, new Vector2(-50,  headerY), 16, FontStyle.Bold, headerCol);
-        CreateText("SCORE",  card.transform, new Vector2(140,  headerY), 16, FontStyle.Bold, headerCol);
-        CreateText("COINS",  card.transform, new Vector2(240,  headerY), 16, FontStyle.Bold, headerCol);
-
-        // Header underline
-        GameObject headerLine = new GameObject("HeaderLine");
-        headerLine.transform.SetParent(card.transform, false);
-        RectTransform hlRect = headerLine.AddComponent<RectTransform>();
-        hlRect.sizeDelta = new Vector2(600, 2);
-        hlRect.anchoredPosition = new Vector2(0, headerY - 18);
-        headerLine.AddComponent<Image>().color = new Color(GOLD.r, GOLD.g, GOLD.b, 0.4f);
-
-        // Rows
-        float rowHeight = 42f;
-        float firstRowY = 175;
-        for (int i = 0; i < 10; i++)
+        // ---- rows 4..10 ----
+        float topY = 30;
+        float rowHeight = 70;
+        float gap = 12;
+        for (int i = 0; i < 7; i++)
         {
-            float y = firstRowY - i * rowHeight;
-            rowWidgets.Add(BuildRow(card.transform, y));
+            float y = topY - i * (rowHeight + gap);
+            bottomRows.Add(BuildBottomRow(card.transform, y, rowHeight));
         }
 
-        // Close button
-        GameObject closeBtn = new GameObject("CloseButton");
-        closeBtn.transform.SetParent(card.transform, false);
-        RectTransform closeRect = closeBtn.AddComponent<RectTransform>();
-        closeRect.anchoredPosition = new Vector2(0, -310);
-        closeRect.sizeDelta = new Vector2(240, 50);
-        Image closeBg = closeBtn.AddComponent<Image>();
-        closeBg.color = new Color(0.85f, 0.22f, 0.22f, 1f);
-        Button closeButton = closeBtn.AddComponent<Button>();
-        ColorBlock cb = closeButton.colors;
-        cb.highlightedColor = new Color(1f, 0.35f, 0.35f, 1f);
-        cb.pressedColor = new Color(0.65f, 0.15f, 0.15f, 1f);
-        cb.normalColor = closeBg.color;
-        closeButton.colors = cb;
-        closeButton.targetGraphic = closeBg;
-        closeButton.onClick.AddListener(Hide);
-        Text closeTxt = CreateText("CLOSE", closeBtn.transform, Vector2.zero, 22, FontStyle.Bold, Color.white);
-        closeTxt.rectTransform.anchorMin = Vector2.zero;
-        closeTxt.rectTransform.anchorMax = Vector2.one;
-        closeTxt.rectTransform.offsetMin = Vector2.zero;
-        closeTxt.rectTransform.offsetMax = Vector2.zero;
+        // ---- close button ----
+        var closeGo = MakeGo("CloseButton", card.transform);
+        var closeRT = (RectTransform)closeGo.transform;
+        closeRT.anchoredPosition = new Vector2(0, -410);
+        closeRT.sizeDelta = new Vector2(220, 56);
+        var closeBg = AddImage(closeGo, roundedRowSprite, ORANGE);
+        var closeBtn = closeGo.AddComponent<Button>();
+        var cb = closeBtn.colors;
+        cb.normalColor = ORANGE; cb.highlightedColor = ORANGE_LIGHT; cb.pressedColor = new Color(0.85f, 0.5f, 0.2f);
+        closeBtn.colors = cb;
+        closeBtn.targetGraphic = closeBg;
+        closeBtn.onClick.AddListener(Hide);
 
-        leaderboardPanel.SetActive(false);
+        var closeText = MakeText("CLOSE", closeGo.transform, Vector2.zero, new Vector2(220, 56), 26, FontStyle.Bold, BROWN_TEXT);
+        closeText.rectTransform.anchorMin = Vector2.zero;
+        closeText.rectTransform.anchorMax = Vector2.one;
+        closeText.rectTransform.offsetMin = Vector2.zero;
+        closeText.rectTransform.offsetMax = Vector2.zero;
+
+        root.SetActive(false);
     }
 
-    RowWidgets BuildRow(Transform parent, float y)
+    void BuildPodium()
     {
-        RowWidgets w = new RowWidgets();
-
-        GameObject rowGo = new GameObject("Row");
-        rowGo.transform.SetParent(parent, false);
-        w.rect = rowGo.AddComponent<RectTransform>();
-        w.rect.sizeDelta = new Vector2(600, 38);
-        w.rect.anchoredPosition = new Vector2(0, y);
-        w.background = rowGo.AddComponent<Image>();
-        w.background.color = new Color(0.13f, 0.16f, 0.24f, 0.7f);
-
-        w.rank  = CreateText("", rowGo.transform, new Vector2(-260, 0), 22, FontStyle.Bold, Color.white);
-        w.icon  = CreateText("", rowGo.transform, new Vector2(-180, 0), 18, FontStyle.Bold, Color.white);
-        w.name  = CreateText("", rowGo.transform, new Vector2(-50,  0), 20, FontStyle.Normal, Color.white);
-        w.score = CreateText("", rowGo.transform, new Vector2(140,  0), 22, FontStyle.Bold, Color.white);
-        w.coins = CreateText("", rowGo.transform, new Vector2(240,  0), 20, FontStyle.Bold, GOLD);
-
-        w.name.rectTransform.sizeDelta = new Vector2(180, 30);
-        w.name.alignment = TextAnchor.MiddleLeft;
-
-        return w;
+        // Layout: P2 left, P1 center (taller), P3 right.
+        BuildPodiumSlot(0, new Vector2(0,    220), new Vector2(180, 260), 130, 56);  // 1st
+        BuildPodiumSlot(1, new Vector2(-180, 165), new Vector2(150, 200), 105, 46);  // 2nd
+        BuildPodiumSlot(2, new Vector2( 180, 165), new Vector2(150, 200), 105, 46);  // 3rd
     }
 
-    Text CreateText(string content, Transform parent, Vector2 position, int size, FontStyle style, Color color)
+    void BuildPodiumSlot(int index, Vector2 pos, Vector2 size, int avatarSize, int badgeSize)
     {
-        GameObject obj = new GameObject("Text_" + content);
-        obj.transform.SetParent(parent, false);
-        RectTransform rect = obj.AddComponent<RectTransform>();
-        rect.anchoredPosition = position;
-        rect.sizeDelta = new Vector2(200, 30);
+        var slotGo = MakeGo("Podium" + (index + 1), card.transform);
+        var rt = (RectTransform)slotGo.transform;
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
 
-        Text text = obj.AddComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = size;
-        text.fontStyle = style;
-        text.color = color;
-        text.text = content;
-        text.alignment = TextAnchor.MiddleCenter;
+        var bg = AddImage(slotGo, roundedCardSprite, CARD_WHITE);
 
-        Outline outline = obj.AddComponent<Outline>();
-        outline.effectColor = new Color(0, 0, 0, 0.85f);
-        outline.effectDistance = new Vector2(1.2f, -1.2f);
+        // Avatar ring
+        var ringGo = MakeGo("Avatar", slotGo.transform);
+        var ringRt = (RectTransform)ringGo.transform;
+        ringRt.anchoredPosition = new Vector2(0, size.y * 0.5f - avatarSize * 0.5f - 12);
+        ringRt.sizeDelta = new Vector2(avatarSize, avatarSize);
+        var ringImg = AddImage(ringGo, circleSprite, ORANGE);
 
-        return text;
+        // Avatar inner circle (lighter)
+        var innerGo = MakeGo("AvatarInner", ringGo.transform);
+        var innerRt = (RectTransform)innerGo.transform;
+        innerRt.anchorMin = innerRt.anchorMax = new Vector2(0.5f, 0.5f);
+        innerRt.sizeDelta = new Vector2(avatarSize * 0.78f, avatarSize * 0.78f);
+        innerRt.anchoredPosition = Vector2.zero;
+        AddImage(innerGo, circleSprite, ORANGE_LIGHT);
+
+        // Avatar letter
+        var letter = MakeText("?", innerGo.transform, Vector2.zero, new Vector2(avatarSize, avatarSize), Mathf.RoundToInt(avatarSize * 0.55f), FontStyle.Bold, BROWN_TEXT);
+
+        // Name text
+        var nameY = size.y * 0.5f - avatarSize - 32;
+        var nameText = MakeText("PLAYER", slotGo.transform, new Vector2(0, nameY), new Vector2(size.x - 16, 20), 14, FontStyle.Bold, BROWN_TEXT);
+
+        // Score text
+        var scoreY = nameY - 28;
+        var scoreText = MakeText("0", slotGo.transform, new Vector2(0, scoreY), new Vector2(size.x - 16, 36), 28, FontStyle.Bold, BROWN_TEXT);
+
+        // Rank badge (orange circle with rank number) - poking out at bottom center
+        var badgeGo = MakeGo("RankBadge", slotGo.transform);
+        var badgeRt = (RectTransform)badgeGo.transform;
+        badgeRt.anchoredPosition = new Vector2(0, -size.y * 0.5f - badgeSize * 0.1f);
+        badgeRt.sizeDelta = new Vector2(badgeSize, badgeSize);
+        var badgeBg = AddImage(badgeGo, circleSprite, ORANGE);
+        var badgeText = MakeText((index + 1).ToString(), badgeGo.transform, Vector2.zero, new Vector2(badgeSize, badgeSize), Mathf.RoundToInt(badgeSize * 0.55f), FontStyle.Bold, WHITE_TEXT);
+
+        var pc = new PodiumCard
+        {
+            rect = rt,
+            cardBg = bg,
+            avatarRing = ringImg,
+            avatarLetter = letter,
+            nameText = nameText,
+            scoreText = scoreText,
+            rankBadgeBg = badgeBg,
+            rankBadgeText = badgeText,
+            baseAnchored = pos
+        };
+        podium[index] = pc;
     }
 
+    RowWidgets BuildBottomRow(Transform parent, float y, float rowHeight)
+    {
+        var rowGo = MakeGo("Row", parent);
+        var rt = (RectTransform)rowGo.transform;
+        rt.anchoredPosition = new Vector2(0, y);
+        rt.sizeDelta = new Vector2(540, rowHeight);
+        var rowBg = AddImage(rowGo, roundedRowSprite, CARD_WHITE);
+
+        // Rank text (left)
+        var rank = MakeText("4.", rowGo.transform, new Vector2(-220, 0), new Vector2(60, rowHeight), 28, FontStyle.Bold, BROWN_TEXT);
+
+        // Avatar circle
+        var avatarGo = MakeGo("Avatar", rowGo.transform);
+        var aRt = (RectTransform)avatarGo.transform;
+        aRt.anchoredPosition = new Vector2(-160, 0);
+        aRt.sizeDelta = new Vector2(rowHeight - 14, rowHeight - 14);
+        var aImg = AddImage(avatarGo, circleSprite, ORANGE_LIGHT);
+
+        var letter = MakeText("?", avatarGo.transform, Vector2.zero, new Vector2(rowHeight, rowHeight), Mathf.RoundToInt((rowHeight - 14) * 0.55f), FontStyle.Bold, BROWN_TEXT);
+
+        // Name text (center-left)
+        var nameText = MakeText("PLAYER", rowGo.transform, new Vector2(-30, 0), new Vector2(220, rowHeight), 22, FontStyle.Bold, BROWN_TEXT, TextAnchor.MiddleLeft);
+
+        // Score badge (right side, orange)
+        var badgeGo = MakeGo("ScoreBadge", rowGo.transform);
+        var bRt = (RectTransform)badgeGo.transform;
+        bRt.anchoredPosition = new Vector2(190, 0);
+        bRt.sizeDelta = new Vector2(140, rowHeight - 8);
+        var bImg = AddImage(badgeGo, roundedRowSprite, ORANGE);
+        var scoreText = MakeText("0", badgeGo.transform, Vector2.zero, new Vector2(140, rowHeight - 8), 26, FontStyle.Bold, WHITE_TEXT);
+
+        return new RowWidgets
+        {
+            rect = rt,
+            rowBg = rowBg,
+            avatarBg = aImg,
+            avatarLetter = letter,
+            rankText = rank,
+            nameText = nameText,
+            scoreBadge = bImg,
+            scoreText = scoreText,
+            baseAnchored = rt.anchoredPosition
+        };
+    }
+
+    // ============================================================ data
     void OnPlayerDeath(object sender, System.EventArgs e)
     {
         if (LeaderboardManager.Instance == null) return;
@@ -229,179 +398,234 @@ public class LeaderboardUI : MonoBehaviour
             LeaderboardManager.Instance.SetCurrentPlayer(playerName);
         }
 
-        Debug.Log("LEADERBOARD: Adding score=" + score + " coins=" + coins + " for " + playerName);
         LeaderboardManager.Instance.TryAddScore(playerName, score, coins);
+
+        if (deathCoroutine != null) StopCoroutine(deathCoroutine);
+        deathCoroutine = StartCoroutine(ShowAfterDelay());
+    }
+
+    IEnumerator ShowAfterDelay()
+    {
+        // Wait so the "You Lost" animation can play first.
+        float t = 0f;
+        while (t < delayBeforeShow)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
         ShowLeaderboard();
     }
 
     public void ShowLeaderboard()
     {
-        leaderboardPanel.SetActive(true);
+        root.SetActive(true);
 
-        List<LeaderboardManager.LeaderboardEntry> entries = LeaderboardManager.Instance.GetEntries();
+        var entries = LeaderboardManager.Instance.GetEntries();
         string currentPlayer = LeaderboardManager.Instance.GetSavedPlayerName();
 
-        // Personal best line
-        int personalBest = 0;
-        foreach (var e in entries)
+        // Top 3 podium
+        for (int i = 0; i < 3; i++)
         {
-            if (e.playerName == currentPlayer && e.score > personalBest) personalBest = e.score;
-        }
-        if (personalBestText != null)
-        {
-            if (!string.IsNullOrEmpty(currentPlayer) && personalBest > 0)
-                personalBestText.text = "Your best: " + FormatScore(personalBest) + "  •  " + currentPlayer;
-            else
-                personalBestText.text = "Climb higher to set a record!";
-        }
-
-        for (int i = 0; i < 10; i++)
-        {
-            var w = rowWidgets[i];
+            var pc = podium[i];
             if (i < entries.Count)
             {
                 var entry = entries[i];
                 bool isYou = entry.playerName == currentPlayer;
+                pc.isCurrentPlayer = isYou;
+
+                pc.cardBg.color = CARD_WHITE;
+                pc.avatarRing.color = ORANGE;
+                pc.rankBadgeBg.color = ORANGE;
+                pc.rankBadgeText.text = (i + 1).ToString();
+
+                pc.avatarLetter.text = GetIconLetter(entry.icon);
+                pc.nameText.text = entry.playerName.ToUpper();
+                pc.scoreText.text = FormatScore(entry.score);
+            }
+            else
+            {
+                pc.isCurrentPlayer = false;
+                pc.cardBg.color = new Color(1f, 1f, 1f, 0.5f);
+                pc.avatarLetter.text = "?";
+                pc.nameText.text = "—";
+                pc.scoreText.text = "—";
+            }
+        }
+
+        // Bottom rows: ranks 4..10
+        for (int i = 0; i < bottomRows.Count; i++)
+        {
+            var w = bottomRows[i];
+            int rankIndex = i + 3; // entries[3] is rank 4
+            if (rankIndex < entries.Count)
+            {
+                var entry = entries[rankIndex];
+                bool isYou = entry.playerName == currentPlayer;
                 w.isCurrentPlayer = isYou;
 
-                // Row background — top 3 get medal-tinted backgrounds, others alternate.
-                Color rowBg;
-                if      (i == 0) rowBg = new Color(GOLD.r,   GOLD.g,   GOLD.b,   0.22f);
-                else if (i == 1) rowBg = new Color(SILVER.r, SILVER.g, SILVER.b, 0.22f);
-                else if (i == 2) rowBg = new Color(BRONZE.r, BRONZE.g, BRONZE.b, 0.22f);
-                else             rowBg = (i % 2 == 0)
-                                    ? new Color(0.13f, 0.16f, 0.24f, 0.7f)
-                                    : new Color(0.10f, 0.13f, 0.20f, 0.7f);
-                if (isYou) rowBg = new Color(1f, 0.92f, 0.20f, 0.30f);
-                w.background.color = rowBg;
-
-                // Rank text & color
-                Color rankCol = i == 0 ? GOLD : i == 1 ? SILVER : i == 2 ? BRONZE
-                              : new Color(0.85f, 0.88f, 0.95f);
-                w.rank.text = i < 3 ? MEDALS[i] : "#" + (i + 1);
-                w.rank.color = rankCol;
-                w.rank.fontSize = i < 3 ? 24 : 22;
-
-                string display;
-                FRUIT_DISPLAY.TryGetValue(entry.icon, out display);
-                w.icon.text = "[ " + (display ?? "?") + " ]";
-                w.icon.color = isYou ? Color.white : new Color(0.92f, 0.95f, 1f);
-
-                w.name.text = entry.playerName;
-                w.name.color = isYou ? new Color(1f, 0.96f, 0.4f) : Color.white;
-                w.name.fontStyle = isYou ? FontStyle.Bold : FontStyle.Normal;
-
-                w.score.text = FormatScore(entry.score);
-                w.score.color = isYou ? new Color(1f, 0.96f, 0.4f) : Color.white;
-
-                w.coins.text = "$" + entry.coins;
-                w.coins.color = GOLD;
+                w.rowBg.color = isYou ? new Color(1f, 0.95f, 0.5f) : CARD_WHITE;
+                w.rankText.text = (rankIndex + 1) + ".";
+                w.rankText.color = BROWN_TEXT;
+                w.avatarBg.color = ORANGE_LIGHT;
+                w.avatarLetter.text = GetIconLetter(entry.icon);
+                w.nameText.text = entry.playerName.ToUpper();
+                w.nameText.color = BROWN_TEXT;
+                w.nameText.fontStyle = isYou ? FontStyle.Bold : FontStyle.Bold;
+                w.scoreBadge.color = ORANGE;
+                w.scoreText.text = FormatScore(entry.score);
             }
             else
             {
                 w.isCurrentPlayer = false;
-                w.background.color = new Color(0.10f, 0.12f, 0.18f, 0.4f);
-                w.rank.text = "#" + (i + 1);
-                w.rank.color = new Color(0.4f, 0.45f, 0.55f);
-                w.icon.text = "—";
-                w.icon.color = new Color(0.4f, 0.45f, 0.55f);
-                w.name.text = "—";
-                w.name.color = new Color(0.4f, 0.45f, 0.55f);
-                w.score.text = "—";
-                w.score.color = new Color(0.4f, 0.45f, 0.55f);
-                w.coins.text = "";
+                w.rowBg.color = new Color(1f, 1f, 1f, 0.5f);
+                w.rankText.text = (rankIndex + 1) + ".";
+                w.rankText.color = new Color(0.55f, 0.45f, 0.40f);
+                w.avatarBg.color = new Color(1f, 0.85f, 0.6f, 0.5f);
+                w.avatarLetter.text = "?";
+                w.nameText.text = "—";
+                w.nameText.color = new Color(0.55f, 0.45f, 0.40f);
+                w.scoreBadge.color = new Color(0.97f, 0.62f, 0.27f, 0.5f);
+                w.scoreText.text = "—";
             }
         }
 
-        StopAllCoroutines();
-        StartCoroutine(EntranceAnimation());
+        if (entranceCoroutine != null) StopCoroutine(entranceCoroutine);
+        if (pulseCoroutine != null) StopCoroutine(pulseCoroutine);
+        entranceCoroutine = StartCoroutine(EntranceAnimation());
     }
 
-    IEnumerator EntranceAnimation()
+    string GetIconLetter(string iconKey)
     {
-        // Fade-in panel + stagger row slide-in.
-        if (panelGroup != null) panelGroup.alpha = 0f;
-        for (int i = 0; i < rowWidgets.Count; i++)
-        {
-            var w = rowWidgets[i];
-            if (w.rect != null)
-            {
-                Vector2 baseTarget = new Vector2(0, w.rect.anchoredPosition.y);
-                w.rect.anchoredPosition = baseTarget + new Vector2(380f, 0f);
-                w.rect.localScale = new Vector3(0.95f, 0.95f, 1f);
-            }
-        }
-
-        float panelFade = 0.18f;
-        float t = 0f;
-        while (t < panelFade)
-        {
-            t += Time.unscaledDeltaTime;
-            if (panelGroup != null) panelGroup.alpha = Mathf.Clamp01(t / panelFade);
-            yield return null;
-        }
-        if (panelGroup != null) panelGroup.alpha = 1f;
-
-        float rowDuration = 0.35f;
-        float stagger = 0.05f;
-        float[] rowStart = new float[rowWidgets.Count];
-        for (int i = 0; i < rowWidgets.Count; i++) rowStart[i] = i * stagger;
-
-        float total = rowDuration + stagger * rowWidgets.Count;
-        float elapsed = 0f;
-        while (elapsed < total)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            for (int i = 0; i < rowWidgets.Count; i++)
-            {
-                var w = rowWidgets[i];
-                float local = Mathf.Clamp01((elapsed - rowStart[i]) / rowDuration);
-                float eased = EaseOutBack(local);
-                if (w.rect != null)
-                {
-                    Vector2 baseTarget = new Vector2(0, w.rect.anchoredPosition.y);
-                    w.rect.anchoredPosition = new Vector2(Mathf.LerpUnclamped(380f, 0f, eased), baseTarget.y);
-                    float s = Mathf.LerpUnclamped(0.95f, 1f, eased);
-                    w.rect.localScale = new Vector3(s, s, 1f);
-                }
-            }
-            yield return null;
-        }
-
-        // Settle
-        for (int i = 0; i < rowWidgets.Count; i++)
-        {
-            var w = rowWidgets[i];
-            if (w.rect != null)
-            {
-                Vector2 baseTarget = new Vector2(0, w.rect.anchoredPosition.y);
-                w.rect.anchoredPosition = new Vector2(0, baseTarget.y);
-                w.rect.localScale = Vector3.one;
-            }
-        }
-
-        // Continuous gentle pulse for the current player's row.
-        while (leaderboardPanel != null && leaderboardPanel.activeSelf)
-        {
-            float pulse = 0.5f + Mathf.Sin(Time.unscaledTime * 3f) * 0.5f;
-            for (int i = 0; i < rowWidgets.Count; i++)
-            {
-                var w = rowWidgets[i];
-                if (!w.isCurrentPlayer || w.rect == null) continue;
-                float s = Mathf.Lerp(1.00f, 1.04f, pulse);
-                w.rect.localScale = new Vector3(s, s, 1f);
-                Color baseC = new Color(1f, 0.92f, 0.20f, Mathf.Lerp(0.22f, 0.42f, pulse));
-                w.background.color = baseC;
-            }
-            yield return null;
-        }
+        if (string.IsNullOrEmpty(iconKey)) return "?";
+        if (FRUIT_DISPLAY.TryGetValue(iconKey, out var d)) return d;
+        return iconKey.Length > 0 ? iconKey.Substring(0, 1).ToUpper() : "?";
     }
 
     static string FormatScore(int score)
     {
-        if (score >= 1_000_000) return (score / 1000_000f).ToString("0.0") + "M";
-        if (score >= 10_000)    return (score / 1000f).ToString("0.0") + "K";
+        if (score >= 1_000_000) return (score / 1_000_000f).ToString("0.0") + "M";
+        if (score >= 1_000)     return (score / 1_000f).ToString("0.0") + "K";
         return score.ToString();
+    }
+
+    // ============================================================ animation
+    IEnumerator EntranceAnimation()
+    {
+        rootGroup.alpha = 0f;
+
+        // initial offsets
+        for (int i = 0; i < 3; i++)
+        {
+            var p = podium[i];
+            p.rect.localScale = new Vector3(0.4f, 0.4f, 1f);
+            p.rect.anchoredPosition = p.baseAnchored + new Vector2(0, -100f);
+        }
+        for (int i = 0; i < bottomRows.Count; i++)
+        {
+            var w = bottomRows[i];
+            w.rect.localScale = new Vector3(0.92f, 0.92f, 1f);
+            w.rect.anchoredPosition = w.baseAnchored + new Vector2(420f, 0f);
+        }
+
+        // fade in dim
+        float t = 0f;
+        while (t < 0.22f)
+        {
+            t += Time.unscaledDeltaTime;
+            rootGroup.alpha = Mathf.Clamp01(t / 0.22f);
+            yield return null;
+        }
+        rootGroup.alpha = 1f;
+
+        // podium pop-in (centered first, then sides)
+        int[] order = { 0, 1, 2 };
+        float popDuration = 0.55f;
+        float stagger = 0.12f;
+        float[] starts = { 0f, stagger, stagger * 2 };
+        float total = popDuration + stagger * 2;
+        float elapsed = 0f;
+        while (elapsed < total)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            for (int k = 0; k < 3; k++)
+            {
+                int i = order[k];
+                var p = podium[i];
+                float local = Mathf.Clamp01((elapsed - starts[k]) / popDuration);
+                float eased = EaseOutBack(local);
+                float s = Mathf.LerpUnclamped(0.4f, 1f, eased);
+                p.rect.localScale = new Vector3(s, s, 1f);
+                p.rect.anchoredPosition = Vector2.LerpUnclamped(p.baseAnchored + new Vector2(0, -100f), p.baseAnchored, eased);
+            }
+            yield return null;
+        }
+        for (int i = 0; i < 3; i++)
+        {
+            podium[i].rect.localScale = Vector3.one;
+            podium[i].rect.anchoredPosition = podium[i].baseAnchored;
+        }
+
+        // rows slide in from right, staggered
+        float rowDur = 0.35f;
+        float rowStagger = 0.05f;
+        float rowTotal = rowDur + rowStagger * bottomRows.Count;
+        float rowElapsed = 0f;
+        while (rowElapsed < rowTotal)
+        {
+            rowElapsed += Time.unscaledDeltaTime;
+            for (int i = 0; i < bottomRows.Count; i++)
+            {
+                var w = bottomRows[i];
+                float local = Mathf.Clamp01((rowElapsed - i * rowStagger) / rowDur);
+                float eased = EaseOutCubic(local);
+                w.rect.anchoredPosition = Vector2.LerpUnclamped(w.baseAnchored + new Vector2(420f, 0f), w.baseAnchored, eased);
+                float s = Mathf.LerpUnclamped(0.92f, 1f, eased);
+                w.rect.localScale = new Vector3(s, s, 1f);
+            }
+            yield return null;
+        }
+        for (int i = 0; i < bottomRows.Count; i++)
+        {
+            bottomRows[i].rect.localScale = Vector3.one;
+            bottomRows[i].rect.anchoredPosition = bottomRows[i].baseAnchored;
+        }
+
+        // continuous gentle bob for top 3 + pulse for current player
+        pulseCoroutine = StartCoroutine(IdleAnimation());
+    }
+
+    IEnumerator IdleAnimation()
+    {
+        while (root != null && root.activeSelf)
+        {
+            float t = Time.unscaledTime;
+            // Top 3 bob (different phase per slot)
+            for (int i = 0; i < 3; i++)
+            {
+                var p = podium[i];
+                float bob = Mathf.Sin(t * 1.4f + i * 0.7f) * 4f;
+                p.rect.anchoredPosition = p.baseAnchored + new Vector2(0, bob);
+
+                // Subtle scale pulse for #1 (more eye-catching)
+                if (i == 0)
+                {
+                    float pulse = 1f + Mathf.Sin(t * 2.2f) * 0.015f;
+                    p.rect.localScale = new Vector3(pulse, pulse, 1f);
+                }
+            }
+
+            // current-player highlight pulse
+            float playerPulse = 0.5f + Mathf.Sin(t * 3f) * 0.5f;
+            for (int i = 0; i < bottomRows.Count; i++)
+            {
+                var w = bottomRows[i];
+                if (!w.isCurrentPlayer) continue;
+                float s = Mathf.Lerp(1.00f, 1.04f, playerPulse);
+                w.rect.localScale = new Vector3(s, s, 1f);
+                w.rowBg.color = Color.Lerp(new Color(1f, 0.95f, 0.5f), new Color(1f, 0.85f, 0.3f), playerPulse);
+            }
+            yield return null;
+        }
     }
 
     static float EaseOutBack(float t)
@@ -413,9 +637,17 @@ public class LeaderboardUI : MonoBehaviour
         return 1f + c3 * k * k * k + c1 * k * k;
     }
 
+    static float EaseOutCubic(float t)
+    {
+        t = Mathf.Clamp01(t);
+        float k = 1f - t;
+        return 1f - k * k * k;
+    }
+
     public void Hide()
     {
-        StopAllCoroutines();
-        if (leaderboardPanel != null) leaderboardPanel.SetActive(false);
+        if (entranceCoroutine != null) StopCoroutine(entranceCoroutine);
+        if (pulseCoroutine != null) StopCoroutine(pulseCoroutine);
+        if (root != null) root.SetActive(false);
     }
 }
