@@ -18,13 +18,17 @@ public class SandJarClock : MonoBehaviour
     [Tooltip("Padding from the chosen corner.")]
     public Vector2 padding = new Vector2(160f, 120f);
 
-    [Header("Sand jar look")]
-    public Color sandColor = new Color(0.93f, 0.20f, 0.42f, 1f);  // hot pink
-    public Color outlineColor = new Color(0.55f, 0.78f, 0.80f, 1f); // soft cyan
-    public float orbDiameter = 110f;
-    public float neckHeight = 22f;
-    public float neckWidth = 10f;
-    public float orbOverlap = 6f;          // pull orbs slightly toward the neck
+    [Header("Sand jar look (gold sand on a dark-wood frame)")]
+    public Color sandColor       = new Color(0.86f, 0.62f, 0.28f, 1f); // amber sand
+    public Color woodColor       = new Color(0.32f, 0.18f, 0.10f, 1f); // dark walnut caps
+    public Color pillarColor     = new Color(0.83f, 0.66f, 0.28f, 1f); // brass pillars
+    public Color glassColor      = new Color(0.92f, 0.95f, 1.00f, 0.18f); // faint glass tint
+    public Color glassEdgeColor  = new Color(0.55f, 0.78f, 0.80f, 0.55f); // glass outline highlight
+    public float jarWidth = 130f;
+    public float chamberHeight = 110f;
+    public float capHeight = 22f;
+    public float pillarWidth = 7f;
+    public float neckHeight = 14f;
 
     [Header("Timing & difficulty")]
     [Tooltip("How many seconds the top orb takes to drain (one 'minute' of game time).")]
@@ -44,21 +48,29 @@ public class SandJarClock : MonoBehaviour
     public float toastDuration = 1.8f;
     public float toastShakeAmount = 14f;
 
+    [Header("Swing animation")]
+    [Tooltip("Max swing angle in degrees (the jar rocks gently like it's hanging).")]
+    public float swingAngle = 6f;
+    [Tooltip("Swing cycles per second.")]
+    public float swingSpeed = 0.6f;
+
     private float elapsed;
     private int currentMinute = 0;
     private bool started;
 
-    private RectTransform jarRect;
-    private Image topOrbOutline;
+    private RectTransform jarRect;        // root — gets rotated for swing
+    private RectTransform jarBodyRect;    // child — holds all the drawn parts (so swing rotates everything together)
     private Image topSandFill;
-    private Image bottomOrbOutline;
     private Image bottomSandFill;
-    private Image neckOutline;
     private Text smallText;
 
-    private Sprite circleFill;
-    private Sprite circleOutline;
-    private Sprite roundedRect;
+    private Sprite triDown;       // inverted triangle (▽) for top chamber sand
+    private Sprite triUp;         // upright triangle (△) for bottom chamber sand
+    private Sprite triDownGlass;  // glass overlay (faint) for top
+    private Sprite triUpGlass;    // glass overlay (faint) for bottom
+    private Sprite triDownEdge;   // glass edge outline for top
+    private Sprite triUpEdge;     // glass edge outline for bottom
+    private Sprite roundedRect;   // wood caps + neck
 
     void Start()
     {
@@ -78,7 +90,7 @@ public class SandJarClock : MonoBehaviour
 
         BuildSprites();
 
-        // Container
+        // ---- root container (gets rotated for the swing) ----
         var jarGo = new GameObject("SandJar", typeof(RectTransform));
         jarGo.transform.SetParent(canvas.transform, false);
         jarRect = (RectTransform)jarGo.transform;
@@ -96,76 +108,86 @@ public class SandJarClock : MonoBehaviour
                 a = p = new Vector2(1f, 0f); ap = new Vector2(-padding.x, padding.y); break;
         }
         jarRect.anchorMin = a; jarRect.anchorMax = a; jarRect.pivot = p;
-        float h = orbDiameter * 2f + neckHeight - orbOverlap * 2f;
-        jarRect.sizeDelta = new Vector2(orbDiameter, h);
+        float totalH = chamberHeight * 2f + neckHeight + capHeight * 2f;
+        jarRect.sizeDelta = new Vector2(jarWidth + pillarWidth * 2 + 12, totalH + 30f);
         jarRect.anchoredPosition = ap;
 
-        // Top orb (outline + sand fill)
-        var topY =  (h - orbDiameter) * 0.5f;
-        var topOutlineGo = new GameObject("TopOrb", typeof(RectTransform));
-        topOutlineGo.transform.SetParent(jarRect, false);
-        var trt = (RectTransform)topOutlineGo.transform;
-        trt.anchorMin = trt.anchorMax = new Vector2(0.5f, 0.5f);
-        trt.pivot = new Vector2(0.5f, 0.5f);
-        trt.sizeDelta = new Vector2(orbDiameter, orbDiameter);
-        trt.anchoredPosition = new Vector2(0, topY);
-        topOrbOutline = topOutlineGo.AddComponent<Image>();
-        topOrbOutline.sprite = circleOutline; topOrbOutline.color = outlineColor;
+        // ---- body (rotation pivot for swing — top center, like it hangs from above) ----
+        var bodyGo = new GameObject("Body", typeof(RectTransform));
+        bodyGo.transform.SetParent(jarRect, false);
+        jarBodyRect = (RectTransform)bodyGo.transform;
+        jarBodyRect.anchorMin = jarBodyRect.anchorMax = new Vector2(0.5f, 1f);
+        jarBodyRect.pivot = new Vector2(0.5f, 1f);
+        jarBodyRect.sizeDelta = jarRect.sizeDelta;
+        jarBodyRect.anchoredPosition = Vector2.zero;
 
-        var topSandGo = new GameObject("TopSand", typeof(RectTransform));
-        topSandGo.transform.SetParent(trt, false);
-        var tsrt = (RectTransform)topSandGo.transform;
-        tsrt.anchorMin = Vector2.zero; tsrt.anchorMax = Vector2.one;
-        tsrt.offsetMin = tsrt.offsetMax = Vector2.zero;
-        topSandFill = topSandGo.AddComponent<Image>();
-        topSandFill.sprite = circleFill; topSandFill.color = sandColor;
-        topSandFill.type = Image.Type.Filled;
-        topSandFill.fillMethod = Image.FillMethod.Vertical;
-        topSandFill.fillOrigin = (int)Image.OriginVertical.Bottom;
-        topSandFill.fillAmount = 1f;
+        // ---- vertical layout: top-cap | top chamber | neck | bottom chamber | bottom-cap ----
+        // Y positions are relative to body center.
+        float yTopCap   =  (totalH - capHeight) * 0.5f;
+        float yTopChamb =  (capHeight + chamberHeight) * 0.5f;
+        // Use yTopChamb if needed below; we mostly position via anchored positions.
 
-        // Bottom orb
-        var botY = -(h - orbDiameter) * 0.5f;
-        var botOutlineGo = new GameObject("BottomOrb", typeof(RectTransform));
-        botOutlineGo.transform.SetParent(jarRect, false);
-        var brt = (RectTransform)botOutlineGo.transform;
-        brt.anchorMin = brt.anchorMax = new Vector2(0.5f, 0.5f);
-        brt.pivot = new Vector2(0.5f, 0.5f);
-        brt.sizeDelta = new Vector2(orbDiameter, orbDiameter);
-        brt.anchoredPosition = new Vector2(0, botY);
-        bottomOrbOutline = botOutlineGo.AddComponent<Image>();
-        bottomOrbOutline.sprite = circleOutline; bottomOrbOutline.color = outlineColor;
+        // ---- gold side pillars (long thin rounded rects spanning full height) ----
+        AddPart("PillarLeft", new Vector2(-(jarWidth * 0.5f + pillarWidth * 0.5f + 1f), 0f),
+                new Vector2(pillarWidth, totalH), pillarColor, roundedRect);
+        AddPart("PillarRight", new Vector2( (jarWidth * 0.5f + pillarWidth * 0.5f + 1f), 0f),
+                new Vector2(pillarWidth, totalH), pillarColor, roundedRect);
 
-        var botSandGo = new GameObject("BottomSand", typeof(RectTransform));
-        botSandGo.transform.SetParent(brt, false);
-        var bsrt = (RectTransform)botSandGo.transform;
-        bsrt.anchorMin = Vector2.zero; bsrt.anchorMax = Vector2.one;
-        bsrt.offsetMin = bsrt.offsetMax = Vector2.zero;
-        bottomSandFill = botSandGo.AddComponent<Image>();
-        bottomSandFill.sprite = circleFill; bottomSandFill.color = sandColor;
-        bottomSandFill.type = Image.Type.Filled;
-        bottomSandFill.fillMethod = Image.FillMethod.Vertical;
-        bottomSandFill.fillOrigin = (int)Image.OriginVertical.Bottom;
-        bottomSandFill.fillAmount = 0f;
+        // ---- wood caps ----
+        AddPart("CapTop", new Vector2(0f, yTopCap),
+                new Vector2(jarWidth + pillarWidth * 2 + 16f, capHeight), woodColor, roundedRect);
+        AddPart("CapBottom", new Vector2(0f, -yTopCap),
+                new Vector2(jarWidth + pillarWidth * 2 + 16f, capHeight), woodColor, roundedRect);
 
-        // Neck (thin pink line + outline frames)
-        var neckGo = new GameObject("Neck", typeof(RectTransform));
-        neckGo.transform.SetParent(jarRect, false);
-        var nrt = (RectTransform)neckGo.transform;
-        nrt.anchorMin = nrt.anchorMax = new Vector2(0.5f, 0.5f);
-        nrt.pivot = new Vector2(0.5f, 0.5f);
-        nrt.sizeDelta = new Vector2(neckWidth, neckHeight);
-        nrt.anchoredPosition = Vector2.zero;
-        neckOutline = neckGo.AddComponent<Image>();
-        neckOutline.sprite = roundedRect; neckOutline.color = sandColor;
+        // Helpful y centres for chambers
+        float yChamberTop = capHeight * 0.5f + chamberHeight * 0.5f + neckHeight * 0.5f;
+        float yChamberBot = -yChamberTop;
 
-        // Small "MM:SS" text below the jar
+        // ---- glass background (very faint) for top chamber (▽) ----
+        AddPart("GlassTop", new Vector2(0f, yChamberTop),
+                new Vector2(jarWidth, chamberHeight), glassColor, triDownGlass);
+
+        // ---- top sand (▽), filled vertically from bottom origin so it 'drains' ----
+        var topSand = AddPart("TopSand", new Vector2(0f, yChamberTop),
+                              new Vector2(jarWidth, chamberHeight), sandColor, triDown);
+        topSand.type = Image.Type.Filled;
+        topSand.fillMethod = Image.FillMethod.Vertical;
+        topSand.fillOrigin = (int)Image.OriginVertical.Bottom;
+        topSand.fillAmount = 1f;
+        topSandFill = topSand;
+
+        // ---- top glass edge (outline) ----
+        AddPart("GlassTopEdge", new Vector2(0f, yChamberTop),
+                new Vector2(jarWidth, chamberHeight), glassEdgeColor, triDownEdge);
+
+        // ---- glass background for bottom chamber (△) ----
+        AddPart("GlassBottom", new Vector2(0f, yChamberBot),
+                new Vector2(jarWidth, chamberHeight), glassColor, triUpGlass);
+
+        // ---- bottom sand (△), filled vertically from bottom origin so it 'fills up' ----
+        var botSand = AddPart("BottomSand", new Vector2(0f, yChamberBot),
+                              new Vector2(jarWidth, chamberHeight), sandColor, triUp);
+        botSand.type = Image.Type.Filled;
+        botSand.fillMethod = Image.FillMethod.Vertical;
+        botSand.fillOrigin = (int)Image.OriginVertical.Bottom;
+        botSand.fillAmount = 0f;
+        bottomSandFill = botSand;
+
+        // ---- bottom glass edge ----
+        AddPart("GlassBottomEdge", new Vector2(0f, yChamberBot),
+                new Vector2(jarWidth, chamberHeight), glassEdgeColor, triUpEdge);
+
+        // ---- neck (thin sand-colored line between chambers) ----
+        AddPart("Neck", new Vector2(0f, 0f),
+                new Vector2(6f, neckHeight + 4f), sandColor, roundedRect);
+
+        // ---- small MM:SS label below ----
         var textGo = new GameObject("SmallTime", typeof(RectTransform));
         textGo.transform.SetParent(jarRect, false);
         var trtxt = (RectTransform)textGo.transform;
         trtxt.anchorMin = trtxt.anchorMax = new Vector2(0.5f, 0f);
         trtxt.pivot = new Vector2(0.5f, 1f);
-        trtxt.sizeDelta = new Vector2(orbDiameter * 1.6f, 30f);
+        trtxt.sizeDelta = new Vector2(jarWidth * 1.6f, 30f);
         trtxt.anchoredPosition = smallTextOffset;
         smallText = textGo.AddComponent<Text>();
         smallText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -182,50 +204,75 @@ public class SandJarClock : MonoBehaviour
         started = true;
     }
 
+    Image AddPart(string name, Vector2 anchored, Vector2 size, Color color, Sprite sprite)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(jarBodyRect, false);
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = size;
+        rt.anchoredPosition = anchored;
+        var img = go.AddComponent<Image>();
+        img.sprite = sprite;
+        img.color = color;
+        if (sprite != null && sprite.border != Vector4.zero) img.type = Image.Type.Sliced;
+        return img;
+    }
+
     void BuildSprites()
     {
-        circleFill    = MakeCircle(128, Color.white, Color.clear, 0);
-        circleOutline = MakeCircleOutline(128, Color.white, 5);
-        roundedRect   = MakeRoundedRect(64, 32, 8, Color.white);
+        triDown      = MakeTriangle(160, 160, pointDown: true,  fill: Color.white, border: Color.clear, borderWidth: 0);
+        triUp        = MakeTriangle(160, 160, pointDown: false, fill: Color.white, border: Color.clear, borderWidth: 0);
+        triDownGlass = triDown;   // same shape, alpha applied by the Image color
+        triUpGlass   = triUp;
+        triDownEdge  = MakeTriangle(160, 160, pointDown: true,  fill: Color.clear, border: Color.white, borderWidth: 3);
+        triUpEdge    = MakeTriangle(160, 160, pointDown: false, fill: Color.clear, border: Color.white, borderWidth: 3);
+        roundedRect  = MakeRoundedRect(64, 32, 8, Color.white);
     }
 
-    Sprite MakeCircle(int diameter, Color fill, Color border, int borderWidth)
+    Sprite MakeTriangle(int w, int h, bool pointDown, Color fill, Color border, int borderWidth)
     {
-        Texture2D tex = new Texture2D(diameter, diameter, TextureFormat.RGBA32, false);
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
         tex.filterMode = FilterMode.Bilinear;
-        Color[] px = new Color[diameter * diameter];
-        float r = diameter / 2f;
-        for (int y = 0; y < diameter; y++)
-            for (int x = 0; x < diameter; x++)
+        Color[] px = new Color[w * h];
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
             {
-                float dx = x - r + 0.5f;
-                float dy = y - r + 0.5f;
-                float d = Mathf.Sqrt(dx * dx + dy * dy);
-                if (d > r) px[y * diameter + x] = Color.clear;
-                else if (borderWidth > 0 && d > r - borderWidth) px[y * diameter + x] = border;
-                else px[y * diameter + x] = fill;
-            }
-        tex.SetPixels(px); tex.Apply();
-        return Sprite.Create(tex, new Rect(0, 0, diameter, diameter), new Vector2(0.5f, 0.5f), 100f);
-    }
+                // For ▽ (pointDown): apex at (w/2, 0), base at top (y = h).
+                //   inside if y >= h - 2h/w * min(x, w-x)
+                // For △ (pointUp):   apex at (w/2, h), base at bottom (y = 0).
+                //   inside if y <= 2h/w * min(x, w-x)
+                float md = Mathf.Min(x, w - 1 - x);
+                float boundary = (2f * h / w) * md;
+                bool inside;
+                float distFromEdge;
+                if (pointDown)
+                {
+                    inside = y >= h - boundary;
+                    distFromEdge = (y - (h - boundary));
+                }
+                else
+                {
+                    inside = y <= boundary;
+                    distFromEdge = boundary - y;
+                }
+                if (!inside) { px[y * w + x] = Color.clear; continue; }
 
-    Sprite MakeCircleOutline(int diameter, Color color, int thickness)
-    {
-        Texture2D tex = new Texture2D(diameter, diameter, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Bilinear;
-        Color[] px = new Color[diameter * diameter];
-        float r = diameter / 2f;
-        for (int y = 0; y < diameter; y++)
-            for (int x = 0; x < diameter; x++)
-            {
-                float dx = x - r + 0.5f;
-                float dy = y - r + 0.5f;
-                float d = Mathf.Sqrt(dx * dx + dy * dy);
-                if (d > r || d < r - thickness) px[y * diameter + x] = Color.clear;
-                else px[y * diameter + x] = color;
+                if (borderWidth > 0)
+                {
+                    if (distFromEdge < borderWidth || md < borderWidth)
+                    {
+                        px[y * w + x] = border;
+                        continue;
+                    }
+                }
+                px[y * w + x] = fill;
             }
+        }
         tex.SetPixels(px); tex.Apply();
-        return Sprite.Create(tex, new Rect(0, 0, diameter, diameter), new Vector2(0.5f, 0.5f), 100f);
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
     }
 
     Sprite MakeRoundedRect(int w, int h, int r, Color color)
@@ -257,6 +304,14 @@ public class SandJarClock : MonoBehaviour
     {
         if (!started) Build();
         if (jarRect == null) return;
+
+        // Swing animation runs even on the menu so it always feels alive.
+        if (jarBodyRect != null && swingAngle > 0f)
+        {
+            float angle = Mathf.Sin(Time.unscaledTime * swingSpeed * Mathf.PI * 2f) * swingAngle;
+            jarBodyRect.localRotation = Quaternion.Euler(0f, 0f, angle);
+        }
+
         if (GameManager.instance == null || !GameManager.instance.play) return;
 
         float dt = Time.unscaledDeltaTime;
