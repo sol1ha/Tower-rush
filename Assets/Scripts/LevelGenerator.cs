@@ -16,6 +16,8 @@ public class LevelGenerator : MonoBehaviour
     public GameObject boostPrefab;
     public GameObject coinPrefab;
     public GameObject spikePrefab;
+    [Tooltip("Optional special platform that lifts the player upward when stood on (uses Platform.isRiserPlatform). Drag your magic-circle platform prefab here.")]
+    public GameObject riserPrefab;
 
     public int numberOfPlatforms = 200;
     public float levelWidth = 3f;
@@ -60,11 +62,14 @@ public class LevelGenerator : MonoBehaviour
 
     public int boostEach;
     public int coinEach;
+    [Tooltip("Spawn a riser (rising-magic) platform every N platforms. 0 = never.")]
+    public int riserEach = 12;
     public Vector3 coinOffset;
     [Tooltip("Vertical offset (in world units) above the platform's center where each spike is placed.")]
     public float spikeYOffset = 1.2f;
     [Tooltip("Horizontal spread of spikes across a platform. 1 = full collider width, 0.85 = inset 15% so they don't hang off the edge.")]
     [Range(0.3f, 1.0f)] public float spikeSpreadRatio = 0.7f;
+    private int riserCounter = 0;
     private int boostCounter = 0;
     private int coinCounter = 5;
 
@@ -118,7 +123,13 @@ public class LevelGenerator : MonoBehaviour
                 RememberPlatform(spawnPosition.x, spawnPosition.y);
                 boostCounter++;
                 coinCounter++;
-                if (boostCounter % boostEach == 0)
+                riserCounter++;
+                if (riserPrefab != null && riserEach > 0 && riserCounter % riserEach == 0)
+                {
+                    SpawnRiser(spawnPosition);
+                    lastSimplePos = spawnPosition;
+                }
+                else if (boostCounter % boostEach == 0)
                 {
                     SpawnBoostFromBase(spawnPosition);
                 }
@@ -170,7 +181,12 @@ public class LevelGenerator : MonoBehaviour
                 RememberPlatform(spawnPosition.x, spawnPosition.y);
                 boostCounter++;
                 coinCounter++;
-                if (boostCounter % boostEach == 0)
+                riserCounter++;
+                if (riserPrefab != null && riserEach > 0 && riserCounter % riserEach == 0)
+                {
+                    SpawnRiser(spawnPosition);
+                }
+                else if (boostCounter % boostEach == 0)
                 {
                     SpawnBoostFromBase(spawnPosition);
                 }
@@ -208,6 +224,21 @@ public class LevelGenerator : MonoBehaviour
 
         var plat = p.GetComponent<Platform>();
         if (plat != null) plat.isBoostPlatform = true;
+    }
+
+    // Spawns the special "riser" platform — uses its own prefab (drag your
+    // magic-circle platform into LevelGenerator.riserPrefab in the inspector).
+    // Its Platform component should have isRiserPlatform=true so it lifts
+    // the player up when stood on.
+    void SpawnRiser(Vector3 pos)
+    {
+        if (riserPrefab == null) return;
+        GameObject r = Instantiate(riserPrefab, pos, Quaternion.identity, transform);
+        platformCount++;
+
+        // Defensive: even if the prefab forgot to flag itself, force it on.
+        var plat = r.GetComponent<Platform>();
+        if (plat != null) plat.isRiserPlatform = true;
     }
 
     bool OverlapsRecent(float x, float y)
