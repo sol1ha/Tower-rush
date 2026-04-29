@@ -21,6 +21,12 @@ public class Player : MonoBehaviour
     public float HorizontalMovement => movement;
     float jetPackThrust;
 
+    [Header("AFK auto-kill")]
+    [Tooltip("If true, attaches an AfkKiller to the player so they're auto-killed after some idle time.")]
+    public bool autoAttachAfkKiller = true;
+    [Tooltip("Seconds without input before the player is auto-killed by the AfkKiller.")]
+    public float afkTimeoutSeconds = 30f;
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -34,6 +40,16 @@ public class Player : MonoBehaviour
             if (area > bestArea) { bestArea = area; best = c; }
         }
         mainCol = best;
+
+        // Attach an AfkKiller (if not already present) so the player is killed
+        // after afkTimeoutSeconds of no input. The script existed but wasn't
+        // wired up to anything in the scene, so the auto-kill never fired.
+        if (autoAttachAfkKiller)
+        {
+            var afk = GetComponent<AfkKiller>();
+            if (afk == null) afk = gameObject.AddComponent<AfkKiller>();
+            afk.afkTimeoutSeconds = afkTimeoutSeconds;
+        }
     }
 
     void OnEnable()

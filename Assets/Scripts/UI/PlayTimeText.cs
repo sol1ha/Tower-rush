@@ -18,7 +18,7 @@ public class PlayTimeText : MonoBehaviour
     [Header("Look")]
     [Tooltip("Font size. The user wanted this 'a bit bigger' — default 56.")]
     public int fontSize = 56;
-    public Color textColor = new Color(1f, 0.95f, 0.55f, 1f); // soft sand-yellow
+    public Color textColor = new Color(0.90f, 0.18f, 0.18f, 1f); // bold red
     public Vector2 textBoxSize = new Vector2(220f, 80f);
 
     private Text label;
