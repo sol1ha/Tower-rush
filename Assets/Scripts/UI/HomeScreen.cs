@@ -294,7 +294,10 @@ public class HomeScreen : MonoBehaviour
         if (GameManager.instance != null) GameManager.instance.play = true;
         else GameManager.StartGame();
 
-        // Spawn the simple in-game play-time text (MM:SS, ticks while playing).
+        // Auto-spawned play-time text is disabled (the user has their own
+        // TMP timer in the scene). If they ever flip spawnPlayTimeText back
+        // on, we'll create a host GameObject and let PlayTimeText drive
+        // whatever label is wired up there.
         if (spawnPlayTimeText)
         {
             if (playTimeText == null)

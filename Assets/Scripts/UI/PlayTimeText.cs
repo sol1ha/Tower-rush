@@ -109,62 +109,9 @@ public class PlayTimeText : MonoBehaviour
         var legacyHere = GetComponent<Text>();
         if (legacyHere != null) { legacyLabel = legacyHere; rect = legacyHere.rectTransform; baseColor = legacyHere.color; built = true; return; }
 
-        // 3) Auto-create a styled Text in the canvas (default path).
-        Canvas canvas = FindAnyObjectByType<Canvas>();
-        if (canvas == null) return;
-
-        var go = new GameObject("PlayTimeText", typeof(RectTransform));
-        go.transform.SetParent(canvas.transform, false);
-        rect = (RectTransform)go.transform;
-
-        Vector2 a, p, ap;
-        switch (anchorCorner)
-        {
-            case Corner.BottomLeft:
-                a = p = new Vector2(0f, 0f); ap = new Vector2(padding.x, padding.y); break;
-            case Corner.TopLeft:
-                a = p = new Vector2(0f, 1f); ap = new Vector2(padding.x, -padding.y); break;
-            case Corner.TopRight:
-                a = p = new Vector2(1f, 1f); ap = new Vector2(-padding.x, -padding.y); break;
-            default:
-                a = p = new Vector2(1f, 0f); ap = new Vector2(-padding.x, padding.y); break;
-        }
-        rect.anchorMin = a; rect.anchorMax = a; rect.pivot = p;
-        rect.sizeDelta = textBoxSize;
-        rect.anchoredPosition = ap;
-
-        legacyLabel = go.AddComponent<Text>();
-
-        // Try to load the custom font from any Resources folder. Fall back to
-        // Unity's built-in LiberationSans if nothing is found there.
-        Font customFont = null;
-        if (!string.IsNullOrEmpty(customFontResourcePath))
-        {
-            customFont = Resources.Load<Font>(customFontResourcePath);
-        }
-        legacyLabel.font = customFont != null
-            ? customFont
-            : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-
-        legacyLabel.fontSize = fontSize;
-        legacyLabel.color = textColor;
-        legacyLabel.alignment = TextAnchor.MiddleCenter;
-        legacyLabel.fontStyle = FontStyle.Bold;
-        legacyLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
-        legacyLabel.verticalOverflow = VerticalWrapMode.Overflow;
-        legacyLabel.text = "00:00";
-
-        // Drop shadow (soft, dark) — depth.
-        var shadow = go.AddComponent<Shadow>();
-        shadow.effectColor = new Color(0f, 0f, 0f, 0.65f);
-        shadow.effectDistance = new Vector2(3f, -3f);
-
-        // Outline (crisp, colored) — readability on busy backgrounds.
-        var outline = go.AddComponent<Outline>();
-        outline.effectColor = outlineColor;
-        outline.effectDistance = new Vector2(2f, -2f);
-
-        baseColor = textColor;
+        // 3) No label wired up — do nothing. The auto-create fallback was
+        //    removed because the user has their own scene TMP timer and the
+        //    extra label was a duplicate.
         built = true;
     }
 
