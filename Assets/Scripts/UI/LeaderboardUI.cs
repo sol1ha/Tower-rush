@@ -283,6 +283,13 @@ public class LeaderboardUI : MonoBehaviour
         closeText.rectTransform.offsetMin = Vector2.zero;
         closeText.rectTransform.offsetMax = Vector2.zero;
 
+        // After EVERYTHING is built, lift the SCORES / COINS tabs to the front
+        // so the podium / rows can never render on top of them. Title also goes
+        // to the front so it's never covered.
+        if (titleText != null) titleText.transform.SetAsLastSibling();
+        if (scoreTabBg != null) scoreTabBg.transform.SetAsLastSibling();
+        if (coinsTabBg != null) coinsTabBg.transform.SetAsLastSibling();
+
         root.SetActive(false);
     }
 
@@ -291,7 +298,7 @@ public class LeaderboardUI : MonoBehaviour
         var tabGo = MakeGo("SortTab_" + title, card.transform);
         var rt = (RectTransform)tabGo.transform;
         rt.anchoredPosition = pos;
-        rt.sizeDelta = new Vector2(180, 44);
+        rt.sizeDelta = new Vector2(200, 50);
         bg = AddImage(tabGo, roundedRowSprite, new Color(1f, 1f, 1f, 0.20f));
         var btn = tabGo.AddComponent<Button>();
         btn.targetGraphic = bg;
@@ -301,7 +308,7 @@ public class LeaderboardUI : MonoBehaviour
         btn.colors = cb;
         btn.onClick.AddListener(() => SetSortMode(mode));
 
-        label = MakeText(title, tabGo.transform, Vector2.zero, new Vector2(180, 44), 18, FontStyle.Bold, WHITE_TEXT);
+        label = MakeText(title, tabGo.transform, Vector2.zero, new Vector2(200, 50), 20, FontStyle.Bold, WHITE_TEXT);
         label.rectTransform.anchorMin = Vector2.zero;
         label.rectTransform.anchorMax = Vector2.one;
         label.rectTransform.offsetMin = label.rectTransform.offsetMax = Vector2.zero;
@@ -331,9 +338,11 @@ public class LeaderboardUI : MonoBehaviour
     void BuildPodium()
     {
         // Layout: P2 left, P1 center (taller), P3 right.
-        BuildPodiumSlot(0, new Vector2(0,    220), new Vector2(180, 260), 130, 56);  // 1st
-        BuildPodiumSlot(1, new Vector2(-180, 165), new Vector2(150, 200), 105, 46);  // 2nd
-        BuildPodiumSlot(2, new Vector2( 180, 165), new Vector2(150, 200), 105, 46);  // 3rd
+        // Pushed down vs the previous layout so the podium #1 avatar doesn't
+        // poke up into the SCORES / COINS tab area.
+        BuildPodiumSlot(0, new Vector2(0,    150), new Vector2(180, 260), 130, 56);  // 1st
+        BuildPodiumSlot(1, new Vector2(-180, 100), new Vector2(150, 200), 105, 46);  // 2nd
+        BuildPodiumSlot(2, new Vector2( 180, 100), new Vector2(150, 200), 105, 46);  // 3rd
     }
 
     void BuildPodiumSlot(int index, Vector2 pos, Vector2 size, int avatarSize, int badgeSize)
