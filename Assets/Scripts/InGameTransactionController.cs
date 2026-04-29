@@ -1,42 +1,61 @@
 using System;
 using UnityEngine;
-
-#if LUXODD_SDK
 using Luxodd.Game.Scripts.Network;
-#endif
+using Luxodd.Game.Scripts.Network.CommandHandler;
 
+/// <summary>
+/// Bridges Tower Rush's local game-over flow into Luxodd's in-game-transaction
+/// API. On game over the local leaderboard is shown first; once the player
+/// dismisses it, this controller fires the system Continue / Restart popups.
+/// Survives scene loads (DontDestroyOnLoad) so the WebSocket reference stays
+/// valid across reloads.
+/// </summary>
 public class InGameTransactionController : MonoBehaviour
 {
     public static InGameTransactionController Instance { get; private set; }
 
-#if LUXODD_SDK
-    [Header("Plugin references")]
+    [Header("Plugin references — auto-found in scene if left empty")]
     [SerializeField] private WebSocketService _webSocketService;
     [SerializeField] private WebSocketCommandHandler _webSocketCommandHandler;
-#endif
+
+    private bool _allowRestart;
 
     private void Awake()
     {
         if (Instance == null)
+        {
             Instance = this;
-        else
+            DontDestroyOnLoad(gameObject);
+        }
+        else if (Instance != this)
+        {
             Destroy(gameObject);
+            return;
+        }
+
+        ResolvePluginRefs();
     }
 
-#if LUXODD_SDK
-    private bool _allowRestart;
-#endif
+    void ResolvePluginRefs()
+    {
+        if (_webSocketService == null)
+            _webSocketService = FindAnyObjectByType<WebSocketService>(FindObjectsInactive.Include);
+        if (_webSocketCommandHandler == null)
+            _webSocketCommandHandler = FindAnyObjectByType<WebSocketCommandHandler>(FindObjectsInactive.Include);
+    }
 
-    // Call this from your gameplay when the run ends (0 lives, timer expired, etc.)
+    /// <summary>
+    /// Call when the player has died and any local UI (leaderboard, "you lost"
+    /// banner, etc.) has finished. Pauses gameplay and routes through the
+    /// Luxodd Continue popup if allowed, then Restart popup, then exit.
+    /// </summary>
     public void OnGameOver(bool allowContinue, bool allowRestart)
     {
-#if LUXODD_SDK
+        ResolvePluginRefs();
         _allowRestart = allowRestart;
 
-        // 1) Freeze/pause gameplay first (VERY IMPORTANT)
         PauseGameplay();
 
-        // 2) Show Continue first if allowed, then Restart on End
         if (allowContinue)
         {
             ShowContinuePopup();
@@ -49,15 +68,9 @@ public class InGameTransactionController : MonoBehaviour
             return;
         }
 
-        // If neither is supported, finish the session normally
         EndSessionAndReturnToSystem();
-#else
-        Debug.LogWarning("Luxodd SDK is not enabled. Game over triggered, but transactions skipped.");
-#endif
     }
 
-
-#if LUXODD_SDK
     private void ShowContinuePopup()
     {
         if (_webSocketService != null)
@@ -66,29 +79,24 @@ public class InGameTransactionController : MonoBehaviour
         }
         else
         {
-            Debug.LogError("WebSocketService is missing!");
-            EndSessionAndReturnToSystem();
+            Debug.LogWarning("[Luxodd] WebSocketService missing — skipping Continue popup.");
+            if (_allowRestart) ShowRestartPopup();
+            else EndSessionAndReturnToSystem();
         }
     }
 
     private void OnContinuePopupResult(SessionOptionAction action)
     {
-        Debug.Log($"[Continue Popup] Player choice: {action}");
-
+        Debug.Log($"[Luxodd] Continue popup result: {action}");
         switch (action)
         {
             case SessionOptionAction.Continue:
                 ResumeGameplayWithContinueBonus();
                 break;
-
             case SessionOptionAction.End:
-                // Player declined to continue — offer Restart if allowed, otherwise exit
-                if (_allowRestart)
-                    ShowRestartPopup();
-                else
-                    EndSessionAndReturnToSystem();
+                if (_allowRestart) ShowRestartPopup();
+                else EndSessionAndReturnToSystem();
                 break;
-
             default:
                 EndSessionAndReturnToSystem();
                 break;
@@ -97,69 +105,83 @@ public class InGameTransactionController : MonoBehaviour
 
     private void ShowRestartPopup()
     {
-        // IMPORTANT:
-        // Before showing Restart popup you MUST send session results.
         if (_webSocketCommandHandler != null)
         {
-            _webSocketCommandHandler.SendLevelEndRequestCommand(() =>
-            {
-                // After results are safely sent, show Restart popup
-                if (_webSocketService != null)
-                    _webSocketService.SendSessionOptionRestart(OnRestartPopupResult);
-            });
+            // Restart finalises the session, so send level-end results FIRST.
+            int score = (HighScoreSet.gameScore + Mathf.Max(0, GetMaxPlayerHeight()));
+            _webSocketCommandHandler.SendLevelEndRequestCommand(
+                level: 1,
+                score: score,
+                onSuccessCallback: () =>
+                {
+                    if (_webSocketService != null)
+                        _webSocketService.SendSessionOptionRestart(OnRestartPopupResult);
+                },
+                onFailureCallback: (code, msg) =>
+                {
+                    Debug.LogWarning($"[Luxodd] Level-end failed before restart: {code} {msg}");
+                    if (_webSocketService != null)
+                        _webSocketService.SendSessionOptionRestart(OnRestartPopupResult);
+                });
+        }
+        else
+        {
+            Debug.LogWarning("[Luxodd] WebSocketCommandHandler missing — skipping Restart popup.");
+            EndSessionAndReturnToSystem();
         }
     }
 
     private void OnRestartPopupResult(SessionOptionAction action)
     {
-        Debug.Log($"[Restart Popup] Player choice: {action}");
-
-        // If player selects Restart, the system starts a new session automatically.
-        if (action == SessionOptionAction.End)
-        {
-            if (_webSocketService != null)
-                _webSocketService.BackToSystem();
-        }
+        Debug.Log($"[Luxodd] Restart popup result: {action}");
+        // System auto-creates a new session on Restart; we only handle End here.
+        if (action == SessionOptionAction.End && _webSocketService != null)
+            _webSocketService.BackToSystem();
     }
 
     private void EndSessionAndReturnToSystem()
     {
-        // Send results first, then return control to system UI/platform
         if (_webSocketCommandHandler != null)
         {
-            _webSocketCommandHandler.SendLevelEndRequestCommand(() =>
-            {
-                if (_webSocketService != null)
-                    _webSocketService.BackToSystem();
-            });
+            int score = (HighScoreSet.gameScore + Mathf.Max(0, GetMaxPlayerHeight()));
+            _webSocketCommandHandler.SendLevelEndRequestCommand(
+                level: 1,
+                score: score,
+                onSuccessCallback: () => { if (_webSocketService != null) _webSocketService.BackToSystem(); },
+                onFailureCallback: (code, msg) =>
+                {
+                    Debug.LogWarning($"[Luxodd] Final level-end failed: {code} {msg}");
+                    if (_webSocketService != null) _webSocketService.BackToSystem();
+                });
+        }
+        else if (_webSocketService != null)
+        {
+            _webSocketService.BackToSystem();
         }
     }
-#endif
 
+    int GetMaxPlayerHeight()
+    {
+        var playerObj = GameObject.FindGameObjectWithTag("Player");
+        return playerObj != null ? Mathf.Max(0, (int)playerObj.transform.position.y) : 0;
+    }
 
-    // -------------------------
-    // Game-specific helpers
-    // -------------------------
+    // -------- gameplay helpers --------
 
-#if LUXODD_SDK
     private void PauseGameplay()
     {
         Time.timeScale = 0f;
-        GameManager.instance.play = false;
+        if (GameManager.instance != null) GameManager.instance.play = false;
     }
 
     private void ResumeGameplayWithContinueBonus()
     {
         Time.timeScale = 1f;
-        GameManager.instance.play = true;
+        if (GameManager.instance != null) GameManager.instance.play = true;
 
-        PlayerHealth playerHealth = FindAnyObjectByType<PlayerHealth>();
-        if (playerHealth != null)
-        {
-            playerHealth.RestoreForContinue();
-        }
+        var playerHealth = FindAnyObjectByType<PlayerHealth>();
+        if (playerHealth != null) playerHealth.RestoreForContinue();
 
-        Debug.Log("Continuing the same session: restoring gameplay state...");
+        Debug.Log("[Luxodd] Continuing same session: restored gameplay state.");
     }
-#endif
 }

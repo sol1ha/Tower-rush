@@ -480,6 +480,10 @@ public class LeaderboardUI : MonoBehaviour
 
         LeaderboardManager.Instance.TryAddScore(playerName, score, coins);
 
+        // Tell Luxodd this run is over so the score is recorded server-side
+        // and the leaderboard refreshes before we show it.
+        if (LuxoddBootstrap.Instance != null) LuxoddBootstrap.Instance.NotifyLevelEnd(1, score);
+
         if (deathCoroutine != null) StopCoroutine(deathCoroutine);
         deathCoroutine = StartCoroutine(ShowAfterDelay());
     }
@@ -730,5 +734,11 @@ public class LeaderboardUI : MonoBehaviour
         if (entranceCoroutine != null) StopCoroutine(entranceCoroutine);
         if (pulseCoroutine != null) StopCoroutine(pulseCoroutine);
         if (root != null) root.SetActive(false);
+
+        // Once the local leaderboard is dismissed, hand off to Luxodd's
+        // in-game transaction popup (Continue / Restart). The controller
+        // pauses gameplay and routes through the system overlay.
+        if (InGameTransactionController.Instance != null)
+            InGameTransactionController.Instance.OnGameOver(allowContinue: true, allowRestart: true);
     }
 }

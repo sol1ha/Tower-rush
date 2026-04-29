@@ -332,6 +332,9 @@ public class HomeScreen : MonoBehaviour
         // so anything already running on game start is unwanted ambient/auto-
         // play that snuck in via PlayOnAwake or a stale prefab field.
         SilenceRogueAudio();
+
+        // Tell Luxodd that a new run / level has begun.
+        if (LuxoddBootstrap.Instance != null) LuxoddBootstrap.Instance.NotifyLevelBegin(1);
     }
 
     void SilenceRogueAudio()
