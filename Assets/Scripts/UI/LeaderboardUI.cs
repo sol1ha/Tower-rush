@@ -369,8 +369,13 @@ public class LeaderboardUI : MonoBehaviour
         innerRt.anchoredPosition = Vector2.zero;
         AddImage(innerGo, circleSprite, ORANGE_LIGHT);
 
-        // Avatar letter
-        var letter = MakeText("?", innerGo.transform, Vector2.zero, new Vector2(avatarSize, avatarSize), Mathf.RoundToInt(avatarSize * 0.55f), FontStyle.Bold, BROWN_TEXT);
+        // Avatar letter — Unity's legacy Text leaves a baseline gap that
+        // makes glyphs read as slightly low. Nudge the anchor up by ~8% of
+        // the avatar size so the letter looks visually centred in the ring.
+        var letter = MakeText("?", innerGo.transform,
+            new Vector2(0f, avatarSize * 0.08f),
+            new Vector2(avatarSize, avatarSize),
+            Mathf.RoundToInt(avatarSize * 0.55f), FontStyle.Bold, BROWN_TEXT);
 
         // Name text
         var nameY = size.y * 0.5f - avatarSize - 32;
@@ -386,7 +391,10 @@ public class LeaderboardUI : MonoBehaviour
         badgeRt.anchoredPosition = new Vector2(0, -size.y * 0.5f - badgeSize * 0.1f);
         badgeRt.sizeDelta = new Vector2(badgeSize, badgeSize);
         var badgeBg = AddImage(badgeGo, circleSprite, ORANGE);
-        var badgeText = MakeText((index + 1).ToString(), badgeGo.transform, Vector2.zero, new Vector2(badgeSize, badgeSize), Mathf.RoundToInt(badgeSize * 0.55f), FontStyle.Bold, WHITE_TEXT);
+        var badgeText = MakeText((index + 1).ToString(), badgeGo.transform,
+            new Vector2(0f, badgeSize * 0.08f),
+            new Vector2(badgeSize, badgeSize),
+            Mathf.RoundToInt(badgeSize * 0.55f), FontStyle.Bold, WHITE_TEXT);
 
         var pc = new PodiumCard
         {
@@ -421,7 +429,10 @@ public class LeaderboardUI : MonoBehaviour
         aRt.sizeDelta = new Vector2(rowHeight - 14, rowHeight - 14);
         var aImg = AddImage(avatarGo, circleSprite, ORANGE_LIGHT);
 
-        var letter = MakeText("?", avatarGo.transform, Vector2.zero, new Vector2(rowHeight, rowHeight), Mathf.RoundToInt((rowHeight - 14) * 0.55f), FontStyle.Bold, BROWN_TEXT);
+        var letter = MakeText("?", avatarGo.transform,
+            new Vector2(0f, rowHeight * 0.08f),
+            new Vector2(rowHeight, rowHeight),
+            Mathf.RoundToInt((rowHeight - 14) * 0.55f), FontStyle.Bold, BROWN_TEXT);
 
         // Name text (center-left)
         var nameText = MakeText("PLAYER", rowGo.transform, new Vector2(-30, 0), new Vector2(220, rowHeight), 22, FontStyle.Bold, BROWN_TEXT, TextAnchor.MiddleLeft);

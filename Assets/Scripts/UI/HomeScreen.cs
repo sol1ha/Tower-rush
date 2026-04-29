@@ -65,9 +65,9 @@ public class HomeScreen : MonoBehaviour
     public PlayTimeText.Corner playTimeTextCorner = PlayTimeText.Corner.BottomRight;
 
     [Header("Hazards")]
-    [Tooltip("If true, auto-attaches a FallingRockSpawner to the scene that drops rocks on the player at higher altitudes.")]
-    public bool spawnFallingRocks = true;
-    private FallingRockSpawner rockSpawner;
+    [Tooltip("If true, auto-attaches a WindGustSpawner that periodically blows the player sideways at higher altitudes.")]
+    public bool spawnWindGusts = true;
+    private WindGustSpawner windSpawner;
 
     private SegmentDigitalClock segmentClock;
     private RectTransform segmentClockRect;
@@ -315,12 +315,12 @@ public class HomeScreen : MonoBehaviour
             playTimeText.Show();
         }
 
-        // Falling-rock hazard host — telegraphs a warning then drops a rock
-        // on the player. Activates above its own height threshold.
-        if (spawnFallingRocks && rockSpawner == null)
+        // Wind-gust hazard host — telegraphs a banner then pushes the player
+        // sideways for a few seconds. Activates above its own height threshold.
+        if (spawnWindGusts && windSpawner == null)
         {
-            var rsGo = new GameObject("FallingRockSpawner");
-            rockSpawner = rsGo.AddComponent<FallingRockSpawner>();
+            var wsGo = new GameObject("WindGustSpawner");
+            windSpawner = wsGo.AddComponent<WindGustSpawner>();
         }
 
         try { if (menuMusic != null) menuMusic.Stop(musicFadeSeconds); } catch { }

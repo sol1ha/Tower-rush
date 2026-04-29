@@ -61,32 +61,39 @@ public class BulletSpawner : MonoBehaviour
     /// Bumps wave frequency and bullet count based on difficulty level.
     /// Called from SandJarClock at every minute boundary.
     /// </summary>
+    [Header("Wave caps")]
+    [Tooltip("Maximum bullets that can ever be in a single wave, regardless of difficulty.")]
+    public int maxBulletsPerWave = 3;
+
     public void SetDifficultyLevel(int level)
     {
         difficultyLevel = Mathf.Max(0, level);
+        int bulletsForLevel;
         switch (difficultyLevel)
         {
             case 0: // normal
                 minInterval = baseMinInterval;
                 maxInterval = baseMaxInterval;
-                bulletsPerWave = baseBulletsPerWave;
+                bulletsForLevel = baseBulletsPerWave;
                 break;
             case 1: // hard
                 minInterval = baseMinInterval * 0.55f;
                 maxInterval = baseMaxInterval * 0.55f;
-                bulletsPerWave = baseBulletsPerWave + 1;
+                bulletsForLevel = baseBulletsPerWave + 1;
                 break;
             case 2: // extreme
                 minInterval = baseMinInterval * 0.35f;
                 maxInterval = baseMaxInterval * 0.35f;
-                bulletsPerWave = baseBulletsPerWave + 3;
+                bulletsForLevel = baseBulletsPerWave + 2;
                 break;
             default: // nightmare (3+)
                 minInterval = baseMinInterval * 0.22f;
                 maxInterval = baseMaxInterval * 0.22f;
-                bulletsPerWave = baseBulletsPerWave + 5;
+                bulletsForLevel = baseBulletsPerWave + 3;
                 break;
         }
+        // Cap so a wave never exceeds maxBulletsPerWave (default 3).
+        bulletsPerWave = Mathf.Min(bulletsForLevel, maxBulletsPerWave);
     }
 
     public int CurrentDifficultyLevel => difficultyLevel;
