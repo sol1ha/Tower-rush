@@ -136,6 +136,11 @@ public class Player : MonoBehaviour
                         velocity.y = platUnder.jumpForce;
                     else
                         velocity.y = autoBounceForce;
+
+                    // Always play a landing sound on a successful auto-bounce so
+                    // repeat landings on the same platform still 'thud'.
+                    Vector3 sfxPos = platUnder != null ? platUnder.transform.position : transform.position;
+                    AudioHelper.PlayLanding(sfxPos);
                 }
             }
 
