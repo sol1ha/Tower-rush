@@ -29,13 +29,20 @@ public class WindGustSpawner : MonoBehaviour
     public float gustDuration = 2.5f;
 
     [Header("Force")]
-    [Tooltip("Horizontal force applied to the player's velocity (units/sec).")]
-    public float gustForce = 8f;
+    [Tooltip("Horizontal speed the wind drags the player at, in world units/sec. Direction matches the banner arrow.")]
+    public float gustForce = 9f;
 
     [Header("Look")]
     public Color warningColor = new Color(1.00f, 0.85f, 0.20f, 1f);
-    public Color streakColor = new Color(0.70f, 0.90f, 1.00f, 0.55f);
-    public int streakCount = 14;
+    public Color streakColor = new Color(0.85f, 0.95f, 1.00f, 0.95f);
+    public int streakCount = 28;
+
+    /// <summary>
+    /// Set by the active wind coroutine and read by Player.FixedUpdate so the
+    /// wind force isn't overwritten by movement input every frame. Positive =
+    /// pushes right; negative = pushes left; 0 = no wind.
+    /// </summary>
+    public static float CurrentForce = 0f;
 
     private Camera cam;
     private Rigidbody2D playerRb;
@@ -132,20 +139,20 @@ public class WindGustSpawner : MonoBehaviour
         while (gt < gustDuration)
         {
             gt += Time.deltaTime;
-            // Push the player by directly nudging their velocity.x. Half the
-            // force at the leading and trailing edges so it ramps in/out.
-            if (playerRb != null)
-            {
-                float ramp = Mathf.Sin(Mathf.Clamp01(gt / gustDuration) * Mathf.PI); // 0..1..0
-                float push = gustForce * ramp * (windBlowsRight ? 1f : -1f);
-                Vector2 v = playerRb.linearVelocity;
-                v.x = Mathf.Lerp(v.x, push, Time.deltaTime * 4f);
-                playerRb.linearVelocity = v;
-            }
+            // Sine-eased ramp 0..1..0 so the wind feels like a real gust
+            // (kicks in, peaks mid-way, eases out).
+            float ramp = Mathf.Sin(Mathf.Clamp01(gt / gustDuration) * Mathf.PI);
+            float push = gustForce * ramp * (windBlowsRight ? 1f : -1f);
+
+            // Player.FixedUpdate overwrites velocity.x with movement input
+            // every frame, so we expose CurrentForce statically and let
+            // Player.cs add it to velocity.x there.
+            CurrentForce = push;
 
             UpdateStreaks(streaks, windBlowsRight, gt);
             yield return null;
         }
+        CurrentForce = 0f;
 
         // Cleanup banner + streaks (fade out 0.4s).
         float fadeT = 0f;
@@ -176,18 +183,21 @@ public class WindGustSpawner : MonoBehaviour
         {
             var go = new GameObject("Streak" + i);
             go.transform.SetParent(parent, false);
-            // Random start X across the camera plus some margin.
             float x = camX + Random.Range(-halfW - 2f, halfW + 2f);
-            float y = camY + Random.Range(-halfH * 0.85f, halfH * 0.85f);
+            float y = camY + Random.Range(-halfH * 0.95f, halfH * 0.95f);
             go.transform.position = new Vector3(x, y, 0f);
-            float length = Random.Range(0.8f, 1.8f);
-            float thick = Random.Range(0.05f, 0.10f);
+            // Longer + thicker streaks, with brighter alpha for visibility.
+            float length = Random.Range(1.4f, 2.6f);
+            float thick = Random.Range(0.10f, 0.18f);
             go.transform.localScale = new Vector3(length / 0.04f, thick / 0.64f, 1f);
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = streakSprite;
-            sr.color = streakColor;
-            sr.sortingOrder = 4;
+            // Vary alpha per streak so they shimmer.
+            Color c = streakColor;
+            c.a *= Random.Range(0.7f, 1.0f);
+            sr.color = c;
+            sr.sortingOrder = 8; // above platforms / decor
             arr[i] = sr;
         }
         return arr;
@@ -197,7 +207,8 @@ public class WindGustSpawner : MonoBehaviour
     {
         if (cam == null) return;
         float halfW = cam.orthographicSize * cam.aspect;
-        float dx = (blowsRight ? 1f : -1f) * 14f * Time.deltaTime;
+        // Streaks scroll fast across the screen so the gust is unmistakable.
+        float dx = (blowsRight ? 1f : -1f) * 32f * Time.deltaTime;
 
         foreach (var sr in arr)
         {

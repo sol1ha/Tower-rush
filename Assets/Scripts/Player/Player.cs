@@ -119,7 +119,11 @@ public class Player : MonoBehaviour
         else
         {
             Vector2 velocity = rb.linearVelocity;
-            velocity.x = movement;
+            // Movement input + active wind force (set by WindGustSpawner during
+            // a gust). Wind is added on top of movement, so the player's input
+            // can fight it but never fully cancel a strong gust — exactly the
+            // 'pushed sideways' feel.
+            velocity.x = movement + WindGustSpawner.CurrentForce;
 
             // Auto-bounce fallback: if player is descending or stationary AND
             // touching ground beneath them, apply that platform's actual bounce
