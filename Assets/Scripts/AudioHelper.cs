@@ -80,6 +80,11 @@ public static class AudioHelper
     public static void PlayDeath(Vector3 worldPos)   => PlayAt(GameOverClip, worldPos, 0.85f);
     // Landing thud: louder (close to music level) + slightly slower playback
     // so it reads as a heavier, deeper bounce.
-    public static void PlayLanding(Vector3 worldPos) => PlayAtPitched(ImpactClip, worldPos, 0.85f, 0.85f);
+    // Landing thud — matched to the platform's own AudioSource volume (0.25)
+    // so the FIRST landing and every subsequent auto-bounce landing sound
+    // identical, just a bit nudged up to compensate for PlayClipAtPoint
+    // attenuation. Pitch back to natural 1.0 so it's the same clip you hear
+    // on the first landing.
+    public static void PlayLanding(Vector3 worldPos) => PlayAtPitched(ImpactClip, worldPos, 0.30f, 1.0f);
     public static void PlayLaserHit(Vector3 worldPos) => PlayAt(LaserClip, worldPos, 0.70f);
 }
