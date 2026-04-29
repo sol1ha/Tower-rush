@@ -10,6 +10,7 @@ public static class AudioHelper
     static AudioClip cachedExplosion;
     static AudioClip cachedGameOver;
     static AudioClip cachedImpact;
+    static AudioClip cachedLaser;
 
     public static AudioClip ExplosionClip
     {
@@ -38,13 +39,47 @@ public static class AudioHelper
         }
     }
 
+    public static AudioClip LaserClip
+    {
+        get
+        {
+            if (cachedLaser == null) cachedLaser = Resources.Load<AudioClip>("Sounds/laser");
+            return cachedLaser;
+        }
+    }
+
     public static void PlayAt(AudioClip clip, Vector3 worldPos, float volume = 1f)
     {
         if (clip == null) return;
         AudioSource.PlayClipAtPoint(clip, worldPos, Mathf.Clamp01(volume));
     }
 
-    public static void PlayDamage(Vector3 worldPos)        => PlayAt(ExplosionClip, worldPos, 0.55f);
-    public static void PlayDeath(Vector3 worldPos)         => PlayAt(GameOverClip, worldPos, 0.85f);
-    public static void PlayLanding(Vector3 worldPos)       => PlayAt(ImpactClip, worldPos, 0.40f);
+    /// <summary>
+    /// Plays a one-shot clip at a world position with a specific pitch.
+    /// PlayClipAtPoint doesn't expose pitch, so we hand-roll a temporary
+    /// AudioSource on a throwaway GameObject and let it self-destroy.
+    /// </summary>
+    public static void PlayAtPitched(AudioClip clip, Vector3 worldPos, float volume, float pitch)
+    {
+        if (clip == null) return;
+        var go = new GameObject("OneShotAudio_" + clip.name);
+        go.transform.position = worldPos;
+        var src = go.AddComponent<AudioSource>();
+        src.clip = clip;
+        src.volume = Mathf.Clamp01(volume);
+        src.pitch = Mathf.Max(0.05f, pitch);
+        src.spatialBlend = 0f; // 2D so position doesn't fade it
+        src.playOnAwake = false;
+        src.Play();
+        // Destroy after the clip finishes (account for pitch — lower pitch
+        // stretches the clip, higher pitch shortens it).
+        Object.Destroy(go, clip.length / src.pitch + 0.1f);
+    }
+
+    public static void PlayDamage(Vector3 worldPos)  => PlayAt(ExplosionClip, worldPos, 0.55f);
+    public static void PlayDeath(Vector3 worldPos)   => PlayAt(GameOverClip, worldPos, 0.85f);
+    // Landing thud: louder (close to music level) + slightly slower playback
+    // so it reads as a heavier, deeper bounce.
+    public static void PlayLanding(Vector3 worldPos) => PlayAtPitched(ImpactClip, worldPos, 0.85f, 0.85f);
+    public static void PlayLaserHit(Vector3 worldPos) => PlayAt(LaserClip, worldPos, 0.70f);
 }

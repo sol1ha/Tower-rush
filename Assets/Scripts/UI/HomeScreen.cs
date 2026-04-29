@@ -64,6 +64,11 @@ public class HomeScreen : MonoBehaviour
     public bool spawnPlayTimeText = false;
     public PlayTimeText.Corner playTimeTextCorner = PlayTimeText.Corner.BottomRight;
 
+    [Header("Hazards")]
+    [Tooltip("If true, auto-attaches a FallingRockSpawner to the scene that drops rocks on the player at higher altitudes.")]
+    public bool spawnFallingRocks = true;
+    private FallingRockSpawner rockSpawner;
+
     private SegmentDigitalClock segmentClock;
     private RectTransform segmentClockRect;
     private Vector2 segmentClockBasePos;
@@ -308,6 +313,14 @@ public class HomeScreen : MonoBehaviour
             }
             playTimeText.ResetTime();
             playTimeText.Show();
+        }
+
+        // Falling-rock hazard host — telegraphs a warning then drops a rock
+        // on the player. Activates above its own height threshold.
+        if (spawnFallingRocks && rockSpawner == null)
+        {
+            var rsGo = new GameObject("FallingRockSpawner");
+            rockSpawner = rsGo.AddComponent<FallingRockSpawner>();
         }
 
         try { if (menuMusic != null) menuMusic.Stop(musicFadeSeconds); } catch { }
