@@ -16,6 +16,8 @@ public class LevelGenerator : MonoBehaviour
     public GameObject boostPrefab;
     public GameObject coinPrefab;
     public GameObject spikePrefab;
+    [Tooltip("Optional special platform that lifts the player upward when stood on (uses Platform.isRiserPlatform). Drag your magic-circle platform prefab here.")]
+    public GameObject riserPrefab;
 
     public int numberOfPlatforms = 200;
     public float levelWidth = 3f;
@@ -60,7 +62,34 @@ public class LevelGenerator : MonoBehaviour
 
     public int boostEach;
     public int coinEach;
+    [Tooltip("Spawn a riser (rising-magic) platform every N platforms. 0 = never.")]
+    public int riserEach = 12;
+    [Tooltip("Spawn a 'ghost' (barely-visible) platform every N platforms. 0 = never.")]
+    public int ghostEach = 11;
+    [Tooltip("Spawn a horizontally-drifting platform every N platforms. 0 = never.")]
+    public int movingEach = 7;
+
+    [Header("Height-based difficulty")]
+    [Tooltip("Player height where the bullet spawner switches to HARD mode (level 1).")]
+    public float bulletHardHeight = 40f;
+    [Tooltip("Player height where bullet spawner switches to EXTREME mode (level 2).")]
+    public float bulletExtremeHeight = 120f;
+    [Tooltip("Player height where bullet spawner switches to NIGHTMARE mode (level 3).")]
+    public float bulletNightmareHeight = 250f;
+    [Tooltip("Above this height, every row may also get a side platform — denser layout but with full collider spacing kept. Set chance to 0 to disable.")]
+    public float densePlatformsHeight = 80f;
+    [Tooltip("Chance per row to spawn an extra side platform once densePlatformsHeight is crossed. 0 = never (default off so platforms don't crowd each other).")]
+    [Range(0f, 1f)] public float densePlatformsChance = 0f;
     public Vector3 coinOffset;
+    [Tooltip("Vertical offset (in world units) above the platform's center where each spike is placed.")]
+    public float spikeYOffset = 1.2f;
+    [Tooltip("Horizontal spread of spikes across a platform. 1 = full collider width, 0.85 = inset 15% so they don't hang off the edge.")]
+    [Range(0.3f, 1.0f)] public float spikeSpreadRatio = 0.7f;
+    private int riserCounter = 0;
+    private int ghostCounter = 0;
+    private int movingCounter = 0;
+    private int currentBulletDifficulty = -1;
+    private BulletSpawner cachedBulletSpawner;
     private int boostCounter = 0;
     private int coinCounter = 5;
 
@@ -86,6 +115,31 @@ public class LevelGenerator : MonoBehaviour
         if(generatorMode == GeneratorMode.PositionBased && generated)
         {
             UpdatePositionBased();
+        }
+
+        UpdateHeightDifficulty();
+    }
+
+    void UpdateHeightDifficulty()
+    {
+        if (player == null)
+        {
+            var po = GameObject.FindGameObjectWithTag("Player");
+            if (po != null) player = po.transform;
+            if (player == null) return;
+        }
+
+        float h = player.position.y;
+        int target =
+            h >= bulletNightmareHeight ? 3 :
+            h >= bulletExtremeHeight   ? 2 :
+            h >= bulletHardHeight      ? 1 : 0;
+
+        if (target != currentBulletDifficulty)
+        {
+            currentBulletDifficulty = target;
+            if (cachedBulletSpawner == null) cachedBulletSpawner = FindAnyObjectByType<BulletSpawner>();
+            if (cachedBulletSpawner != null) cachedBulletSpawner.SetDifficultyLevel(target);
         }
     }
 
@@ -114,9 +168,27 @@ public class LevelGenerator : MonoBehaviour
                 RememberPlatform(spawnPosition.x, spawnPosition.y);
                 boostCounter++;
                 coinCounter++;
-                if (boostCounter % boostEach == 0)
+                riserCounter++;
+                ghostCounter++;
+                movingCounter++;
+                if (riserPrefab != null && riserEach > 0 && riserCounter % riserEach == 0)
                 {
-                    Instantiate(boostPrefab, spawnPosition, Quaternion.identity, transform);
+                    SpawnRiser(spawnPosition);
+                    lastSimplePos = spawnPosition;
+                }
+                else if (movingEach > 0 && movingCounter % movingEach == 0)
+                {
+                    SpawnMovingFromBase(spawnPosition);
+                    lastSimplePos = spawnPosition;
+                }
+                else if (ghostEach > 0 && ghostCounter % ghostEach == 0)
+                {
+                    SpawnGhostFromBase(spawnPosition);
+                    lastSimplePos = spawnPosition;
+                }
+                else if (boostCounter % boostEach == 0)
+                {
+                    SpawnBoostFromBase(spawnPosition);
                 }
                 else
                 {
@@ -127,7 +199,8 @@ public class LevelGenerator : MonoBehaviour
                     {
                         Instantiate(platformPrefab, spawnPosition, Quaternion.identity, transform);
                         platformCount++;
-                        Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity, transform);
+                        var coinGo = Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity, transform);
+                        if (coinGo.GetComponent<CoinVisualEnhancer>() == null) coinGo.AddComponent<CoinVisualEnhancer>();
                     }
                     else
                     {
@@ -166,9 +239,24 @@ public class LevelGenerator : MonoBehaviour
                 RememberPlatform(spawnPosition.x, spawnPosition.y);
                 boostCounter++;
                 coinCounter++;
-                if (boostCounter % boostEach == 0)
+                riserCounter++;
+                ghostCounter++;
+                movingCounter++;
+                if (riserPrefab != null && riserEach > 0 && riserCounter % riserEach == 0)
                 {
-                    Instantiate(boostPrefab, spawnPosition, Quaternion.identity, transform);
+                    SpawnRiser(spawnPosition);
+                }
+                else if (movingEach > 0 && movingCounter % movingEach == 0)
+                {
+                    SpawnMovingFromBase(spawnPosition);
+                }
+                else if (ghostEach > 0 && ghostCounter % ghostEach == 0)
+                {
+                    SpawnGhostFromBase(spawnPosition);
+                }
+                else if (boostCounter % boostEach == 0)
+                {
+                    SpawnBoostFromBase(spawnPosition);
                 }
                 else
                 {
@@ -179,7 +267,8 @@ public class LevelGenerator : MonoBehaviour
                     {
                         Instantiate(platformPrefab, spawnPosition, Quaternion.identity, transform);
                         platformCount++;
-                        Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity, transform);
+                        var coinGo = Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity, transform);
+                        if (coinGo.GetComponent<CoinVisualEnhancer>() == null) coinGo.AddComponent<CoinVisualEnhancer>();
                     }
                     else
                     {
@@ -192,6 +281,58 @@ public class LevelGenerator : MonoBehaviour
                 lastPosition = spawnPosition;
             }
         }
+    }
+
+    // Spawns a boost platform that visually matches the regular platform exactly
+    // (same prefab, same sprite color, same size, same collider). Adds a small
+    // floating gold up-arrow above it so the player can tell it's a boost.
+    void SpawnBoostFromBase(Vector3 pos)
+    {
+        GameObject p = Instantiate(platformPrefab, pos, Quaternion.identity, transform);
+        platformCount++;
+
+        var plat = p.GetComponent<Platform>();
+        if (plat != null) plat.isBoostPlatform = true;
+
+        // Floating chevron / arrow indicator hovering above the platform so
+        // the boost is telegraphed clearly without changing the platform itself.
+        p.AddComponent<BoostIndicator>();
+    }
+
+    // Spawns a 'ghost' platform — same regular prefab and full collision, but
+    // its SpriteRenderer alpha is dropped to a low value with a slow shimmer so
+    // the player has to look carefully to spot it.
+    void SpawnGhostFromBase(Vector3 pos)
+    {
+        GameObject p = Instantiate(platformPrefab, pos, Quaternion.identity, transform);
+        platformCount++;
+        p.AddComponent<GhostPlatformVisual>();
+    }
+
+    // Spawns a moving platform — regular prefab, full collision, but Platform's
+    // isMovingPlatform flag is set so it drifts horizontally on a sine wave.
+    // Random phase per platform so neighbouring movers don't sync visibly.
+    void SpawnMovingFromBase(Vector3 pos)
+    {
+        GameObject p = Instantiate(platformPrefab, pos, Quaternion.identity, transform);
+        platformCount++;
+        var plat = p.GetComponent<Platform>();
+        if (plat != null) plat.isMovingPlatform = true;
+    }
+
+    // Spawns the special "riser" platform — uses its own prefab (drag your
+    // magic-circle platform into LevelGenerator.riserPrefab in the inspector).
+    // Its Platform component should have isRiserPlatform=true so it lifts
+    // the player up when stood on.
+    void SpawnRiser(Vector3 pos)
+    {
+        if (riserPrefab == null) return;
+        GameObject r = Instantiate(riserPrefab, pos, Quaternion.identity, transform);
+        platformCount++;
+
+        // Defensive: even if the prefab forgot to flag itself, force it on.
+        var plat = r.GetComponent<Platform>();
+        if (plat != null) plat.isRiserPlatform = true;
     }
 
     bool OverlapsRecent(float x, float y)
@@ -252,10 +393,19 @@ public class LevelGenerator : MonoBehaviour
 
     void SpawnRowExtras(float y, float mainX)
     {
-        if (extraPlatformsPerRow <= 0) return;
-        if (Random.value > extraRowChance) return;
+        // Above the dense-platforms height threshold the level packs extra side
+        // platforms into rows (1 per row, with a configurable chance) — denser
+        // gameplay without violating minNoOverlapX spacing rules. Below the
+        // threshold the original 'extraPlatformsPerRow' / 'extraRowChance'
+        // settings still apply.
+        bool densityActive = y >= densePlatformsHeight;
+        int countToSpawn = densityActive ? Mathf.Max(extraPlatformsPerRow, 1) : extraPlatformsPerRow;
+        float chance = densityActive ? Mathf.Max(extraRowChance, densePlatformsChance) : extraRowChance;
+
+        if (countToSpawn <= 0) return;
+        if (Random.value > chance) return;
         var occupied = new List<float> { mainX };
-        for (int i = 0; i < extraPlatformsPerRow; i++)
+        for (int i = 0; i < countToSpawn; i++)
         {
             if (!SpawnExtraRowPlatform(y, occupied)) break;
         }
@@ -291,19 +441,29 @@ public class LevelGenerator : MonoBehaviour
     {
         if (spikePrefab == null) return;
 
-        // Spawn 2 or 3 spikes, spread evenly across the platform
-        int spikeCount = Random.Range(2, 4); // 2 or 3
-        SpriteRenderer sr = platform.GetComponent<SpriteRenderer>();
-        float platformWidth = sr != null ? sr.bounds.size.x : 1.5f;
-        float platformTop = sr != null ? sr.bounds.size.y * 0.5f : 0.2f;
+        // Use the platform's BoxCollider2D to decide how wide the spike row can
+        // be, but the vertical placement is a fixed 'spikeYOffset' above the
+        // platform's center so spikes always sit clearly on top, not embedded.
+        BoxCollider2D bc = platform.GetComponent<BoxCollider2D>();
+        float platformWidth;
+        if (bc != null) platformWidth = bc.size.x;
+        else
+        {
+            SpriteRenderer sr = platform.GetComponent<SpriteRenderer>();
+            platformWidth = sr != null ? sr.bounds.size.x : 1.5f;
+        }
 
-        float spacing = platformWidth / (spikeCount + 1);
-        float startX = platformPos.x - platformWidth * 0.5f;
+        // Spawn 2 or 3 spikes, spread across an inset portion of the platform
+        // so they don't hang off the edges.
+        int spikeCount = Random.Range(2, 4); // 2 or 3
+        float usable = platformWidth * Mathf.Clamp(spikeSpreadRatio, 0.3f, 1f);
+        float spacing = usable / (spikeCount + 1);
+        float startX = platformPos.x - usable * 0.5f;
 
         for (int i = 0; i < spikeCount; i++)
         {
             float x = startX + spacing * (i + 1);
-            Vector3 spikePos = new Vector3(x, platformPos.y + platformTop, 0f);
+            Vector3 spikePos = new Vector3(x, platformPos.y + spikeYOffset, 0f);
             GameObject spike = Instantiate(spikePrefab, spikePos, Quaternion.identity);
             spike.transform.SetParent(platform.transform);
         }

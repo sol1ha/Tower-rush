@@ -44,10 +44,13 @@ public class BackgroundMusic : MonoBehaviour
         }
 
         source = GetComponent<AudioSource>();
-        source.clip = musicClip;
+        if (musicClip != null) source.clip = musicClip;
+        else if (source.clip == null && source.resource is AudioClip rc) source.clip = rc;
         source.loop = true;
         source.playOnAwake = false;
         source.spatialBlend = 0f; // 2D sound, plays from anywhere.
+        source.mute = false;
+        source.enabled = true;
         source.volume = fadeInSeconds > 0f ? 0f : volume;
     }
 

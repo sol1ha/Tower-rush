@@ -128,6 +128,10 @@ public class Laser_kill : MonoBehaviour
         health.DamagePlayer(damageAmount);
         int after = health.GetHealth();
 
+        // Distinct laser-zap sound on top of the generic damage sound so
+        // the player knows it was the laser that hit them.
+        AudioHelper.PlayLaserHit(player != null ? player.position : transform.position);
+
         Debug.Log($"LASER HIT: health {before} -> {after}");
 
         if (after > 0 && player != null)

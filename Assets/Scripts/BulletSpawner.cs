@@ -40,11 +40,63 @@ public class BulletSpawner : MonoBehaviour
     private bool waveQueued;
     private bool nextWaveFromLeft;
 
+    // Difficulty mode: 0 = normal, 1 = hard, 2 = extreme. Set by SandJarClock.
+    private int difficultyLevel = 0;
+    // Cached base values so each difficulty step scales from the originals,
+    // not from the previously-modified values.
+    private float baseMinInterval;
+    private float baseMaxInterval;
+    private int baseBulletsPerWave;
+
     void Start()
     {
         cam = Camera.main;
         nextWaveTime = Time.time + initialDelay;
+        baseMinInterval = minInterval;
+        baseMaxInterval = maxInterval;
+        baseBulletsPerWave = bulletsPerWave;
     }
+
+    /// <summary>
+    /// Bumps wave frequency and bullet count based on difficulty level.
+    /// Called from SandJarClock at every minute boundary.
+    /// </summary>
+    [Header("Wave caps")]
+    [Tooltip("Maximum bullets that can ever be in a single wave, regardless of difficulty.")]
+    public int maxBulletsPerWave = 3;
+
+    public void SetDifficultyLevel(int level)
+    {
+        difficultyLevel = Mathf.Max(0, level);
+        int bulletsForLevel;
+        switch (difficultyLevel)
+        {
+            case 0: // normal
+                minInterval = baseMinInterval;
+                maxInterval = baseMaxInterval;
+                bulletsForLevel = baseBulletsPerWave;
+                break;
+            case 1: // hard
+                minInterval = baseMinInterval * 0.55f;
+                maxInterval = baseMaxInterval * 0.55f;
+                bulletsForLevel = baseBulletsPerWave + 1;
+                break;
+            case 2: // extreme
+                minInterval = baseMinInterval * 0.35f;
+                maxInterval = baseMaxInterval * 0.35f;
+                bulletsForLevel = baseBulletsPerWave + 2;
+                break;
+            default: // nightmare (3+)
+                minInterval = baseMinInterval * 0.22f;
+                maxInterval = baseMaxInterval * 0.22f;
+                bulletsForLevel = baseBulletsPerWave + 3;
+                break;
+        }
+        // Cap so a wave never exceeds maxBulletsPerWave (default 3).
+        bulletsPerWave = Mathf.Min(bulletsForLevel, maxBulletsPerWave);
+    }
+
+    public int CurrentDifficultyLevel => difficultyLevel;
 
     void Update()
     {

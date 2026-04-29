@@ -5,7 +5,10 @@ public class LeaderboardManager : MonoBehaviour
 {
     public static LeaderboardManager Instance;
 
-    private const string LEADERBOARD_KEY = "InfinityRush_Leaderboard_v2";
+    public enum SortMode { ByScore, ByCoins }
+
+    private const string LEADERBOARD_KEY_LEGACY = "InfinityRush_Leaderboard_v2";
+    private const string LEADERBOARD_KEY = "InfinityRush_Leaderboard_v3"; // bumped: dual-list payload
     private const string CURRENT_PLAYER_KEY = "InfinityRush_CurrentPlayer";
     private const int MAX_ENTRIES = 10;
 
@@ -34,6 +37,15 @@ public class LeaderboardManager : MonoBehaviour
     [System.Serializable]
     private class LeaderboardData
     {
+        // One ranking sorted by score (best score per player), one by coins
+        // (best coin total per player). Entries in each are independent.
+        public List<LeaderboardEntry> byScore = new List<LeaderboardEntry>();
+        public List<LeaderboardEntry> byCoins = new List<LeaderboardEntry>();
+    }
+
+    [System.Serializable]
+    private class LegacyLeaderboardData
+    {
         public List<LeaderboardEntry> entries = new List<LeaderboardEntry>();
     }
 
@@ -58,10 +70,7 @@ public class LeaderboardManager : MonoBehaviour
         LoadLeaderboard();
     }
 
-    public string GetSavedPlayerName()
-    {
-        return PlayerPrefs.GetString(CURRENT_PLAYER_KEY, "");
-    }
+    public string GetSavedPlayerName() => PlayerPrefs.GetString(CURRENT_PLAYER_KEY, "");
 
     public void SetCurrentPlayer(string playerName)
     {
@@ -72,39 +81,66 @@ public class LeaderboardManager : MonoBehaviour
             SavePlayerCard(playerName);
     }
 
+    /// <summary>
+    /// Inserts/updates the player's best entry on BOTH rankings independently
+    /// (best score in byScore, best coins in byCoins). Returns true if either
+    /// list was changed.
+    /// </summary>
     public bool TryAddScore(string playerName, int score, int coins)
     {
         if (string.IsNullOrEmpty(playerName)) return false;
 
         string icon = GetPlayerIcon(playerName);
-        LeaderboardEntry newEntry = new LeaderboardEntry(playerName, score, coins, icon);
+        bool changedScore = UpsertBest(leaderboard.byScore, playerName, score, coins, icon, byScore: true);
+        bool changedCoins = UpsertBest(leaderboard.byCoins, playerName, score, coins, icon, byScore: false);
 
-        // Only keep best score per player — update if higher, skip if lower
-        for (int i = 0; i < leaderboard.entries.Count; i++)
+        if (changedScore || changedCoins)
         {
-            if (leaderboard.entries[i].playerName == playerName)
+            SaveLeaderboard();
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// In <paramref name="list"/> (the score-ranked or coin-ranked list), update
+    /// the player's row if their incoming metric is higher than what's there;
+    /// otherwise leave it alone. Insert a new row if the player isn't present.
+    /// </summary>
+    bool UpsertBest(List<LeaderboardEntry> list, string playerName, int score, int coins, string icon, bool byScore)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i].playerName == playerName)
             {
-                if (score > leaderboard.entries[i].score)
+                int existing = byScore ? list[i].score : list[i].coins;
+                int incoming = byScore ? score : coins;
+                if (incoming > existing)
                 {
-                    leaderboard.entries[i] = newEntry;
-                    SortAndTrim();
-                    SaveLeaderboard();
+                    list[i] = new LeaderboardEntry(playerName, score, coins, icon);
+                    SortAndTrim(list, byScore);
                     return true;
                 }
                 return false;
             }
         }
 
-        leaderboard.entries.Add(newEntry);
-        SortAndTrim();
-        SaveLeaderboard();
+        list.Add(new LeaderboardEntry(playerName, score, coins, icon));
+        SortAndTrim(list, byScore);
         return true;
     }
 
-    public List<LeaderboardEntry> GetEntries()
+    /// <summary>
+    /// Returns a copy of the leaderboard sorted by the requested metric.
+    /// </summary>
+    public List<LeaderboardEntry> GetEntries(SortMode mode = SortMode.ByScore)
     {
-        return new List<LeaderboardEntry>(leaderboard.entries);
+        var src = mode == SortMode.ByCoins ? leaderboard.byCoins : leaderboard.byScore;
+        return new List<LeaderboardEntry>(src);
     }
+
+    /// <summary>Backward-compatible default — score ranking.</summary>
+    public List<LeaderboardEntry> GetEntries() => GetEntries(SortMode.ByScore);
 
     string GetPlayerIcon(string playerName)
     {
@@ -113,10 +149,7 @@ public class LeaderboardManager : MonoBehaviour
         {
             PlayerCardList cards = JsonUtility.FromJson<PlayerCardList>(cardsJson);
             foreach (var card in cards.cards)
-            {
-                if (card.playerName == playerName)
-                    return card.icon;
-            }
+                if (card.playerName == playerName) return card.icon;
         }
         return ProfileIcons[Random.Range(0, ProfileIcons.Length)];
     }
@@ -125,12 +158,8 @@ public class LeaderboardManager : MonoBehaviour
     {
         string cardsJson = PlayerPrefs.GetString("InfinityRush_PlayerCards", "");
         if (string.IsNullOrEmpty(cardsJson)) return false;
-
         PlayerCardList cards = JsonUtility.FromJson<PlayerCardList>(cardsJson);
-        foreach (var card in cards.cards)
-        {
-            if (card.playerName == playerName) return true;
-        }
+        foreach (var card in cards.cards) if (card.playerName == playerName) return true;
         return false;
     }
 
@@ -138,12 +167,10 @@ public class LeaderboardManager : MonoBehaviour
     {
         string cardsJson = PlayerPrefs.GetString("InfinityRush_PlayerCards", "");
         PlayerCardList cards;
-        if (string.IsNullOrEmpty(cardsJson))
-            cards = new PlayerCardList();
-        else
-            cards = JsonUtility.FromJson<PlayerCardList>(cardsJson);
+        if (string.IsNullOrEmpty(cardsJson)) cards = new PlayerCardList();
+        else cards = JsonUtility.FromJson<PlayerCardList>(cardsJson);
 
-        PlayerCard newCard = new PlayerCard();
+        var newCard = new PlayerCard();
         newCard.playerName = playerName;
         newCard.icon = ProfileIcons[Random.Range(0, ProfileIcons.Length)];
         cards.cards.Add(newCard);
@@ -152,20 +179,42 @@ public class LeaderboardManager : MonoBehaviour
         PlayerPrefs.Save();
     }
 
-    void SortAndTrim()
+    void SortAndTrim(List<LeaderboardEntry> list, bool byScore)
     {
-        leaderboard.entries.Sort((a, b) => b.score.CompareTo(a.score));
-        if (leaderboard.entries.Count > MAX_ENTRIES)
-            leaderboard.entries.RemoveRange(MAX_ENTRIES, leaderboard.entries.Count - MAX_ENTRIES);
+        if (byScore) list.Sort((a, b) => b.score.CompareTo(a.score));
+        else         list.Sort((a, b) => b.coins.CompareTo(a.coins));
+        if (list.Count > MAX_ENTRIES) list.RemoveRange(MAX_ENTRIES, list.Count - MAX_ENTRIES);
     }
 
     void LoadLeaderboard()
     {
         string json = PlayerPrefs.GetString(LEADERBOARD_KEY, "");
-        if (string.IsNullOrEmpty(json))
-            leaderboard = new LeaderboardData();
-        else
+        if (!string.IsNullOrEmpty(json))
+        {
             leaderboard = JsonUtility.FromJson<LeaderboardData>(json);
+            if (leaderboard.byScore == null) leaderboard.byScore = new List<LeaderboardEntry>();
+            if (leaderboard.byCoins == null) leaderboard.byCoins = new List<LeaderboardEntry>();
+            return;
+        }
+
+        // Migrate legacy single-list data -> new dual-list format.
+        leaderboard = new LeaderboardData();
+        string legacyJson = PlayerPrefs.GetString(LEADERBOARD_KEY_LEGACY, "");
+        if (!string.IsNullOrEmpty(legacyJson))
+        {
+            var legacy = JsonUtility.FromJson<LegacyLeaderboardData>(legacyJson);
+            if (legacy != null && legacy.entries != null)
+            {
+                foreach (var e in legacy.entries)
+                {
+                    leaderboard.byScore.Add(new LeaderboardEntry(e.playerName, e.score, e.coins, e.icon));
+                    leaderboard.byCoins.Add(new LeaderboardEntry(e.playerName, e.score, e.coins, e.icon));
+                }
+                SortAndTrim(leaderboard.byScore, byScore: true);
+                SortAndTrim(leaderboard.byCoins, byScore: false);
+                SaveLeaderboard();
+            }
+        }
     }
 
     void SaveLeaderboard()

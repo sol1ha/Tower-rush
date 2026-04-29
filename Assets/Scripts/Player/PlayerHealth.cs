@@ -48,6 +48,10 @@ public class PlayerHealth : MonoBehaviour
         {
             audioSource.playOnAwake = false;
             audioSource.Stop();
+            if (audioSource.clip == null && audioSource.resource is AudioClip rc)
+                audioSource.clip = rc;
+            audioSource.mute = false;
+            audioSource.enabled = true;
         }
         PlayerKillLimit.PlayerKill += PlayerKillLimit_PlayerKill;
 
@@ -124,6 +128,9 @@ public class PlayerHealth : MonoBehaviour
             ShowDamagePopup(amount);
             if (DamageVignette.Instance != null) DamageVignette.Instance.PlayHit();
 
+            // Play "ouch" sound on losing a heart.
+            AudioHelper.PlayDamage(transform.position);
+
             if (health <= 0f)
             {
                 PlayerKillLimit.TriggerEventStatic();
@@ -194,6 +201,9 @@ public class PlayerHealth : MonoBehaviour
         PlayerKillLimit.PlayerKill -= PlayerKillLimit_PlayerKill;
 
         if (audioSource != null) audioSource.Play();
+        // Backup death sound via PlayClipAtPoint in case the AudioSource is
+        // misconfigured / disabled — guarantees the player hears 'game over'.
+        AudioHelper.PlayDeath(transform.position);
 
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         if (sr != null && deathSprite != null) sr.sprite = deathSprite;
