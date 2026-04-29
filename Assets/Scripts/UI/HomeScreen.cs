@@ -325,6 +325,32 @@ public class HomeScreen : MonoBehaviour
 
         try { if (menuMusic != null) menuMusic.Stop(musicFadeSeconds); } catch { }
         try { if (gameMusic != null) gameMusic.Play(); } catch { }
+
+        // Defensive: silence any AudioSource that's currently playing other
+        // than the BackgroundMusic. All gameplay sounds are event-triggered
+        // (coin pickup, platform bounce, damage, death, laser hit, landing),
+        // so anything already running on game start is unwanted ambient/auto-
+        // play that snuck in via PlayOnAwake or a stale prefab field.
+        SilenceRogueAudio();
+    }
+
+    void SilenceRogueAudio()
+    {
+        var sources = FindObjectsByType<AudioSource>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var src in sources)
+        {
+            if (src == null) continue;
+            // Keep the music alive.
+            if (src.GetComponent<BackgroundMusic>() != null) continue;
+            // Keep AudioHelper-spawned one-shots alive (they self-destroy when done).
+            if (src.gameObject.name.StartsWith("OneShotAudio_")) continue;
+
+            if (src.isPlaying) src.Stop();
+            // Belt-and-suspenders: stop PlayOnAwake from triggering anything we
+            // don't manage. Event-triggered SFX still call .Play() / .PlayOneShot()
+            // each time so they keep working.
+            src.playOnAwake = false;
+        }
     }
 
     void Update()
