@@ -212,6 +212,8 @@ public class Platform : MonoBehaviour
                 rb.linearVelocity = zeroV;
                 if (bulletbounce != null && bulletbounce.enabled && bulletbounce.clip != null)
                     bulletbounce.PlayOneShot(bulletbounce.clip);
+                else
+                    AudioHelper.PlayLanding(transform.position);
             }
             bouncedThisFrame = true;
             return;
@@ -235,6 +237,8 @@ public class Platform : MonoBehaviour
 
         if (bulletbounce != null && bulletbounce.enabled && bulletbounce.clip != null)
             bulletbounce.PlayOneShot(bulletbounce.clip);
+        else
+            AudioHelper.PlayLanding(transform.position);
     }
 
     // Returns the player's main/largest Collider2D (the one that should define their footprint).

@@ -199,7 +199,8 @@ public class LevelGenerator : MonoBehaviour
                     {
                         Instantiate(platformPrefab, spawnPosition, Quaternion.identity, transform);
                         platformCount++;
-                        Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity, transform);
+                        var coinGo = Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity, transform);
+                        if (coinGo.GetComponent<CoinVisualEnhancer>() == null) coinGo.AddComponent<CoinVisualEnhancer>();
                     }
                     else
                     {
@@ -266,7 +267,8 @@ public class LevelGenerator : MonoBehaviour
                     {
                         Instantiate(platformPrefab, spawnPosition, Quaternion.identity, transform);
                         platformCount++;
-                        Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity, transform);
+                        var coinGo = Instantiate(coinPrefab, spawnPosition + coinOffset, Quaternion.identity, transform);
+                        if (coinGo.GetComponent<CoinVisualEnhancer>() == null) coinGo.AddComponent<CoinVisualEnhancer>();
                     }
                     else
                     {

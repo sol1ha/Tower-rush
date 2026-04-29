@@ -224,7 +224,7 @@ public class LeaderboardUI : MonoBehaviour
         var cRect = (RectTransform)card.transform;
         cRect.anchorMin = cRect.anchorMax = new Vector2(0.5f, 0.5f);
         cRect.pivot = new Vector2(0.5f, 0.5f);
-        cRect.sizeDelta = new Vector2(620, 880);
+        cRect.sizeDelta = new Vector2(820, 1080);
         cRect.anchoredPosition = Vector2.zero;
         AddImage(card, roundedCardSprite, TEAL_BG);
 
@@ -233,7 +233,7 @@ public class LeaderboardUI : MonoBehaviour
         var fRect = (RectTransform)frame.transform;
         fRect.anchorMin = fRect.anchorMax = new Vector2(0.5f, 0.5f);
         fRect.pivot = new Vector2(0.5f, 0.5f);
-        fRect.sizeDelta = new Vector2(636, 896);
+        fRect.sizeDelta = new Vector2(840, 1100);
         fRect.anchoredPosition = Vector2.zero;
         AddImage(frame, roundedCardSprite, TEAL_OUTER);
         frame.transform.SetSiblingIndex(card.transform.GetSiblingIndex());
