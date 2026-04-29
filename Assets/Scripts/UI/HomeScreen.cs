@@ -60,8 +60,8 @@ public class HomeScreen : MonoBehaviour
     public Vector2 autoLabelSizeDelta = new Vector2(360f, 110f);
 
     [Header("In-game elapsed-time text")]
-    [Tooltip("If true, auto-spawns a simple MM:SS time label in a corner of the canvas during gameplay.")]
-    public bool spawnPlayTimeText = true;
+    [Tooltip("If true, auto-spawns a simple MM:SS time label in a corner of the canvas during gameplay. Off by default since the user has their own TMP timer in the scene.")]
+    public bool spawnPlayTimeText = false;
     public PlayTimeText.Corner playTimeTextCorner = PlayTimeText.Corner.BottomRight;
 
     private SegmentDigitalClock segmentClock;
