@@ -76,10 +76,10 @@ public class LevelGenerator : MonoBehaviour
     public float bulletExtremeHeight = 120f;
     [Tooltip("Player height where bullet spawner switches to NIGHTMARE mode (level 3).")]
     public float bulletNightmareHeight = 250f;
-    [Tooltip("Above this height, every row may also get a side platform — denser layout but with full collider spacing kept.")]
+    [Tooltip("Above this height, every row may also get a side platform — denser layout but with full collider spacing kept. Set chance to 0 to disable.")]
     public float densePlatformsHeight = 80f;
-    [Tooltip("Chance per row to spawn an extra side platform once densePlatformsHeight is crossed.")]
-    [Range(0f, 1f)] public float densePlatformsChance = 0.45f;
+    [Tooltip("Chance per row to spawn an extra side platform once densePlatformsHeight is crossed. 0 = never (default off so platforms don't crowd each other).")]
+    [Range(0f, 1f)] public float densePlatformsChance = 0f;
     public Vector3 coinOffset;
     [Tooltip("Vertical offset (in world units) above the platform's center where each spike is placed.")]
     public float spikeYOffset = 1.2f;

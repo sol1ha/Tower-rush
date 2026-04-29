@@ -198,9 +198,9 @@ MonoBehaviour:
   minXGap: 3
   maxXGap: 9
   extraPlatformsPerRow: 0
-  extraRowChance: 0.2
-  minNoOverlapX: 2.2
-  overlapYWindow: 2.5
+  extraRowChance: 0
+  minNoOverlapX: 5
+  overlapYWindow: 4.5
   overlapMemory: 12
   spikeStartPlatform: 8
   spikeChance: 0.25
