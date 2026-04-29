@@ -240,14 +240,15 @@ public class LeaderboardUI : MonoBehaviour
 
         // ---- title ----
         titleText = MakeText("•  TOP SCORES  •", card.transform,
-            new Vector2(0, 380), new Vector2(580, 60),
-            34, FontStyle.Bold, WHITE_TEXT);
+            new Vector2(0, 480), new Vector2(700, 60),
+            36, FontStyle.Bold, WHITE_TEXT);
 
-        // ---- sort tabs ('SCORES' / 'COINS') ----
+        // ---- sort tabs ('SCORES' / 'COINS') — pushed up below the title so
+        // they're not buried behind the podium / leaderboard rows. ----
         BuildSortTab(out scoreTabBg, out scoreTabLabel, "SCORES",
-            new Vector2(-110, 332), LeaderboardManager.SortMode.ByScore);
+            new Vector2(-130, 410), LeaderboardManager.SortMode.ByScore);
         BuildSortTab(out coinsTabBg, out coinsTabLabel, "COINS",
-            new Vector2( 110, 332), LeaderboardManager.SortMode.ByCoins);
+            new Vector2( 130, 410), LeaderboardManager.SortMode.ByCoins);
         UpdateTabHighlight();
 
         // ---- top 3 podium ----

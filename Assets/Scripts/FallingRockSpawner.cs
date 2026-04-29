@@ -22,25 +22,25 @@ public class FallingRockSpawner : MonoBehaviour
     public float intervalAtMinHeight = 9f;
     [Tooltip("Seconds between rocks at fullDifficultyHeight.")]
     public float intervalAtMaxHeight = 2.5f;
-    [Tooltip("Seconds the warning circle is shown before the rock spawns.")]
-    public float warningDuration = 0.8f;
+    [Tooltip("Seconds the warning ring is shown before the rock spawns. Longer = more time to dodge.")]
+    public float warningDuration = 1.6f;
 
     [Header("Rock")]
-    [Tooltip("World units off-screen (above the camera) where the rock spawns.")]
-    public float spawnOffsetAboveCamera = 6f;
+    [Tooltip("World units above the player where the rock starts falling. Should be small enough to stay in view.")]
+    public float spawnHeightAbovePlayer = 7f;
     [Tooltip("Damage dealt by each rock.")]
     public int rockDamage = 1;
     [Tooltip("Rock fall speed (world units/sec).")]
-    public float fallSpeed = 14f;
+    public float fallSpeed = 9f;
     [Tooltip("Diameter of the rock sprite in world units.")]
-    public float rockSize = 0.9f;
+    public float rockSize = 1.1f;
     [Tooltip("How far ahead of the player's current X the rock can land (random ± this).")]
     public float horizontalSpread = 4f;
 
     [Header("Warning indicator")]
-    [Tooltip("Diameter of the warning circle in world units.")]
-    public float warningDiameter = 1.5f;
-    public Color warningColor = new Color(1f, 0.25f, 0.25f, 0.55f);
+    [Tooltip("Diameter of the warning ring in world units.")]
+    public float warningDiameter = 2.4f;
+    public Color warningColor = new Color(1f, 0.18f, 0.18f, 0.95f);
     public Color rockColor = new Color(0.55f, 0.30f, 0.20f, 1f);
     public Color rockOutlineColor = new Color(0.20f, 0.10f, 0.05f, 1f);
 
@@ -93,37 +93,73 @@ public class FallingRockSpawner : MonoBehaviour
     {
         if (player == null) yield break;
 
-        // Pick a random X near the player.
+        // Pick a random X near the player. We freeze it so a moving player can
+        // actually escape the predicted strike zone.
         float targetX = player.position.x + Random.Range(-horizontalSpread, horizontalSpread);
-        float warnY = player.position.y + 0.4f; // a bit above the player so it's visible
+        float warnY = player.position.y + 1.2f; // a bit above the player
 
-        // Warning circle that pulses at the impact X.
+        // Group: red ring + bright "!" mark in the middle so the threat reads
+        // immediately at a glance.
         var warnGo = new GameObject("RockWarning");
         warnGo.transform.position = new Vector3(targetX, warnY, 0f);
-        var sr = warnGo.AddComponent<SpriteRenderer>();
-        sr.sprite = warningSprite;
-        sr.color = warningColor;
-        sr.sortingOrder = 6;
         warnGo.transform.localScale = Vector3.one * (warningDiameter / 0.64f);
+
+        var ringGo = new GameObject("Ring");
+        ringGo.transform.SetParent(warnGo.transform, false);
+        var ringSr = ringGo.AddComponent<SpriteRenderer>();
+        ringSr.sprite = warningSprite;
+        ringSr.color = warningColor;
+        ringSr.sortingOrder = 6;
+
+        // "!" mark drawn as 3 small filled bars (top stem + bottom dot) using
+        // procedural sprites — tiny addition for unmistakable danger reading.
+        var bangGo = new GameObject("Bang");
+        bangGo.transform.SetParent(warnGo.transform, false);
+        bangGo.transform.localScale = Vector3.one * 0.55f;
+        var bangSr = bangGo.AddComponent<SpriteRenderer>();
+        if (cachedBangSprite == null) cachedBangSprite = MakeBangSprite();
+        bangSr.sprite = cachedBangSprite;
+        bangSr.color = warningColor;
+        bangSr.sortingOrder = 7;
+
+        // Vertical "drop line" connecting the warning to the spawn point so the
+        // player can see EXACTLY where the rock is coming from.
+        var lineGo = new GameObject("DropLine");
+        lineGo.transform.SetParent(warnGo.transform, false);
+        var lineSr = lineGo.AddComponent<SpriteRenderer>();
+        if (cachedLineSprite == null) cachedLineSprite = MakeLineSprite();
+        lineSr.sprite = cachedLineSprite;
+        Color lineCol = warningColor; lineCol.a = 0.55f;
+        lineSr.color = lineCol;
+        lineSr.sortingOrder = 5;
+        // Line stretches from warning up to the spawn height.
+        float lineHeight = spawnHeightAbovePlayer;
+        lineGo.transform.localScale = new Vector3(0.05f / 0.04f, lineHeight / (0.64f), 1f);
+        lineGo.transform.localPosition = new Vector3(0f, lineHeight * 0.5f / (warningDiameter / 0.64f), 0f);
 
         float t = 0f;
         while (t < warningDuration)
         {
             t += Time.deltaTime;
-            // Pulsing alpha for visibility.
-            float pulse = 0.5f + Mathf.Sin(t * 12f) * 0.5f;
+            // Faster, stronger pulse so it's unmissable.
+            float pulse = 0.5f + Mathf.Sin(t * 16f) * 0.5f;
             Color c = warningColor;
-            c.a = Mathf.Lerp(0.35f, 0.95f, pulse);
-            sr.color = c;
-            // Update X each frame in case the player moves the warning with them — keep static for fairness.
+            c.a = Mathf.Lerp(0.55f, 1f, pulse);
+            ringSr.color = c;
+            bangSr.color = c;
+            // Slight scale pulse on the ring for extra urgency.
+            float s = 1f + Mathf.Sin(t * 8f) * 0.10f;
+            ringGo.transform.localScale = new Vector3(s, s, 1f);
             yield return null;
         }
         Destroy(warnGo);
 
-        // Spawn the rock above the camera at the same X, falling straight down.
-        float topY = cam.transform.position.y + cam.orthographicSize + spawnOffsetAboveCamera;
+        // Spawn the rock just above the player so it's visibly falling in
+        // their view, not popping in from offscreen at the last second.
+        float spawnY = player != null ? player.position.y + spawnHeightAbovePlayer
+                                       : cam.transform.position.y + cam.orthographicSize;
         var rockGo = new GameObject("FallingRock");
-        rockGo.transform.position = new Vector3(targetX, topY, 0f);
+        rockGo.transform.position = new Vector3(targetX, spawnY, 0f);
         var rsr = rockGo.AddComponent<SpriteRenderer>();
         rsr.sprite = rockSprite;
         rsr.sortingOrder = 7;
@@ -134,12 +170,43 @@ public class FallingRockSpawner : MonoBehaviour
         col.isTrigger = true;
 
         var rb = rockGo.AddComponent<Rigidbody2D>();
-        rb.bodyType = RigidbodyType2D.Kinematic; // we move it ourselves
+        rb.bodyType = RigidbodyType2D.Kinematic;
         rb.gravityScale = 0f;
 
         var rock = rockGo.AddComponent<FallingRock>();
         rock.damage = rockDamage;
         rock.fallSpeed = fallSpeed;
+    }
+
+    static Sprite cachedBangSprite;
+    static Sprite cachedLineSprite;
+
+    Sprite MakeBangSprite()
+    {
+        int w = 64, h = 96;
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        Color[] px = new Color[w * h];
+        // Top stem (y >= 28): vertical bar, 12 px wide centered.
+        // Bottom dot (y < 18): small filled rounded square.
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+        {
+            bool inStem = y >= 28 && y <= h - 6 && Mathf.Abs(x - w / 2f) < 7f;
+            bool inDot  = y >= 6 && y <= 22 && Mathf.Abs(x - w / 2f) < 9f && Mathf.Abs(y - 14) < 9f;
+            px[y * w + x] = (inStem || inDot) ? Color.white : Color.clear;
+        }
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    Sprite MakeLineSprite()
+    {
+        int w = 4, h = 64;
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        Color[] px = new Color[w * h];
+        for (int i = 0; i < px.Length; i++) px[i] = Color.white;
+        tex.SetPixels(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
     }
 
     // ---------- procedural sprites ----------
