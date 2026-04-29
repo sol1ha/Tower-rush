@@ -68,6 +68,18 @@ public class LevelGenerator : MonoBehaviour
     public int ghostEach = 11;
     [Tooltip("Spawn a horizontally-drifting platform every N platforms. 0 = never.")]
     public int movingEach = 7;
+
+    [Header("Height-based difficulty")]
+    [Tooltip("Player height where the bullet spawner switches to HARD mode (level 1).")]
+    public float bulletHardHeight = 40f;
+    [Tooltip("Player height where bullet spawner switches to EXTREME mode (level 2).")]
+    public float bulletExtremeHeight = 120f;
+    [Tooltip("Player height where bullet spawner switches to NIGHTMARE mode (level 3).")]
+    public float bulletNightmareHeight = 250f;
+    [Tooltip("Above this height, every row may also get a side platform — denser layout but with full collider spacing kept.")]
+    public float densePlatformsHeight = 80f;
+    [Tooltip("Chance per row to spawn an extra side platform once densePlatformsHeight is crossed.")]
+    [Range(0f, 1f)] public float densePlatformsChance = 0.45f;
     public Vector3 coinOffset;
     [Tooltip("Vertical offset (in world units) above the platform's center where each spike is placed.")]
     public float spikeYOffset = 1.2f;
@@ -76,6 +88,8 @@ public class LevelGenerator : MonoBehaviour
     private int riserCounter = 0;
     private int ghostCounter = 0;
     private int movingCounter = 0;
+    private int currentBulletDifficulty = -1;
+    private BulletSpawner cachedBulletSpawner;
     private int boostCounter = 0;
     private int coinCounter = 5;
 
@@ -101,6 +115,31 @@ public class LevelGenerator : MonoBehaviour
         if(generatorMode == GeneratorMode.PositionBased && generated)
         {
             UpdatePositionBased();
+        }
+
+        UpdateHeightDifficulty();
+    }
+
+    void UpdateHeightDifficulty()
+    {
+        if (player == null)
+        {
+            var po = GameObject.FindGameObjectWithTag("Player");
+            if (po != null) player = po.transform;
+            if (player == null) return;
+        }
+
+        float h = player.position.y;
+        int target =
+            h >= bulletNightmareHeight ? 3 :
+            h >= bulletExtremeHeight   ? 2 :
+            h >= bulletHardHeight      ? 1 : 0;
+
+        if (target != currentBulletDifficulty)
+        {
+            currentBulletDifficulty = target;
+            if (cachedBulletSpawner == null) cachedBulletSpawner = FindAnyObjectByType<BulletSpawner>();
+            if (cachedBulletSpawner != null) cachedBulletSpawner.SetDifficultyLevel(target);
         }
     }
 
@@ -352,10 +391,19 @@ public class LevelGenerator : MonoBehaviour
 
     void SpawnRowExtras(float y, float mainX)
     {
-        if (extraPlatformsPerRow <= 0) return;
-        if (Random.value > extraRowChance) return;
+        // Above the dense-platforms height threshold the level packs extra side
+        // platforms into rows (1 per row, with a configurable chance) — denser
+        // gameplay without violating minNoOverlapX spacing rules. Below the
+        // threshold the original 'extraPlatformsPerRow' / 'extraRowChance'
+        // settings still apply.
+        bool densityActive = y >= densePlatformsHeight;
+        int countToSpawn = densityActive ? Mathf.Max(extraPlatformsPerRow, 1) : extraPlatformsPerRow;
+        float chance = densityActive ? Mathf.Max(extraRowChance, densePlatformsChance) : extraRowChance;
+
+        if (countToSpawn <= 0) return;
+        if (Random.value > chance) return;
         var occupied = new List<float> { mainX };
-        for (int i = 0; i < extraPlatformsPerRow; i++)
+        for (int i = 0; i < countToSpawn; i++)
         {
             if (!SpawnExtraRowPlatform(y, occupied)) break;
         }

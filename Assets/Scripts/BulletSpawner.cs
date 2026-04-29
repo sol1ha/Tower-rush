@@ -72,17 +72,24 @@ public class BulletSpawner : MonoBehaviour
                 bulletsPerWave = baseBulletsPerWave;
                 break;
             case 1: // hard
-                minInterval = baseMinInterval * 0.5f;
-                maxInterval = baseMaxInterval * 0.5f;
-                bulletsPerWave = baseBulletsPerWave + 2;
+                minInterval = baseMinInterval * 0.55f;
+                maxInterval = baseMaxInterval * 0.55f;
+                bulletsPerWave = baseBulletsPerWave + 1;
                 break;
-            default: // extreme (2+)
-                minInterval = baseMinInterval * 0.33f;
-                maxInterval = baseMaxInterval * 0.33f;
-                bulletsPerWave = baseBulletsPerWave + 4;
+            case 2: // extreme
+                minInterval = baseMinInterval * 0.35f;
+                maxInterval = baseMaxInterval * 0.35f;
+                bulletsPerWave = baseBulletsPerWave + 3;
+                break;
+            default: // nightmare (3+)
+                minInterval = baseMinInterval * 0.22f;
+                maxInterval = baseMaxInterval * 0.22f;
+                bulletsPerWave = baseBulletsPerWave + 5;
                 break;
         }
     }
+
+    public int CurrentDifficultyLevel => difficultyLevel;
 
     void Update()
     {
