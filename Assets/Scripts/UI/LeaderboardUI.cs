@@ -68,6 +68,16 @@ public class LeaderboardUI : MonoBehaviour
     private Coroutine pulseCoroutine;
     private Coroutine deathCoroutine;
 
+    // Two rankings: top scores vs top coin collectors. Toggle between them.
+    private LeaderboardManager.SortMode currentSort = LeaderboardManager.SortMode.ByScore;
+    private Text titleText;        // "★  LEADERBOARD  ★"
+    private Image scoreTabBg;
+    private Text  scoreTabLabel;
+    private Image coinsTabBg;
+    private Text  coinsTabLabel;
+    private Text  scoreColumnHeader; // "SCORE" / "COINS"
+    private Text  coinsColumnHeader; // "COINS" / "SCORE"
+
     private static readonly Dictionary<string, string> FRUIT_DISPLAY = new Dictionary<string, string>()
     {
         {"apple", "A"}, {"cherry", "C"}, {"grape", "G"},
@@ -229,9 +239,16 @@ public class LeaderboardUI : MonoBehaviour
         frame.transform.SetSiblingIndex(card.transform.GetSiblingIndex());
 
         // ---- title ----
-        MakeText("•  LEADERBOARD  •", card.transform,
+        titleText = MakeText("•  TOP SCORES  •", card.transform,
             new Vector2(0, 380), new Vector2(580, 60),
             34, FontStyle.Bold, WHITE_TEXT);
+
+        // ---- sort tabs ('SCORES' / 'COINS') ----
+        BuildSortTab(out scoreTabBg, out scoreTabLabel, "SCORES",
+            new Vector2(-110, 332), LeaderboardManager.SortMode.ByScore);
+        BuildSortTab(out coinsTabBg, out coinsTabLabel, "COINS",
+            new Vector2( 110, 332), LeaderboardManager.SortMode.ByCoins);
+        UpdateTabHighlight();
 
         // ---- top 3 podium ----
         BuildPodium();
@@ -267,6 +284,48 @@ public class LeaderboardUI : MonoBehaviour
 
         root.SetActive(false);
     }
+
+    void BuildSortTab(out Image bg, out Text label, string title, Vector2 pos, LeaderboardManager.SortMode mode)
+    {
+        var tabGo = MakeGo("SortTab_" + title, card.transform);
+        var rt = (RectTransform)tabGo.transform;
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = new Vector2(180, 44);
+        bg = AddImage(tabGo, roundedRowSprite, new Color(1f, 1f, 1f, 0.20f));
+        var btn = tabGo.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        var cb = btn.colors;
+        cb.highlightedColor = new Color(1f, 1f, 1f, 0.30f);
+        cb.pressedColor = new Color(1f, 1f, 1f, 0.45f);
+        btn.colors = cb;
+        btn.onClick.AddListener(() => SetSortMode(mode));
+
+        label = MakeText(title, tabGo.transform, Vector2.zero, new Vector2(180, 44), 18, FontStyle.Bold, WHITE_TEXT);
+        label.rectTransform.anchorMin = Vector2.zero;
+        label.rectTransform.anchorMax = Vector2.one;
+        label.rectTransform.offsetMin = label.rectTransform.offsetMax = Vector2.zero;
+    }
+
+    public void SetSortMode(LeaderboardManager.SortMode mode)
+    {
+        if (mode == currentSort) return;
+        currentSort = mode;
+        UpdateTabHighlight();
+        if (root != null && root.activeSelf) ShowLeaderboard();
+    }
+
+    void UpdateTabHighlight()
+    {
+        Color active   = new Color(GOLD.r, GOLD.g, GOLD.b, 0.85f);
+        Color inactive = new Color(1f, 1f, 1f, 0.18f);
+        if (scoreTabBg != null) scoreTabBg.color = currentSort == LeaderboardManager.SortMode.ByScore ? active : inactive;
+        if (coinsTabBg != null) coinsTabBg.color = currentSort == LeaderboardManager.SortMode.ByCoins ? active : inactive;
+        if (titleText != null) titleText.text = currentSort == LeaderboardManager.SortMode.ByCoins
+            ? "•  TOP COIN COLLECTORS  •"
+            : "•  TOP SCORES  •";
+    }
+
+    static readonly Color GOLD = new Color(1.00f, 0.84f, 0.10f, 1f);
 
     void BuildPodium()
     {
@@ -420,8 +479,9 @@ public class LeaderboardUI : MonoBehaviour
     {
         root.SetActive(true);
 
-        var entries = LeaderboardManager.Instance.GetEntries();
+        var entries = LeaderboardManager.Instance.GetEntries(currentSort);
         string currentPlayer = LeaderboardManager.Instance.GetSavedPlayerName();
+        bool byCoins = currentSort == LeaderboardManager.SortMode.ByCoins;
 
         // Top 3 podium
         for (int i = 0; i < 3; i++)
@@ -440,7 +500,7 @@ public class LeaderboardUI : MonoBehaviour
 
                 pc.avatarLetter.text = GetIconLetter(entry.icon);
                 pc.nameText.text = entry.playerName.ToUpper();
-                pc.scoreText.text = FormatScore(entry.score);
+                pc.scoreText.text = byCoins ? "$" + entry.coins : FormatScore(entry.score);
             }
             else
             {
@@ -472,7 +532,7 @@ public class LeaderboardUI : MonoBehaviour
                 w.nameText.color = BROWN_TEXT;
                 w.nameText.fontStyle = isYou ? FontStyle.Bold : FontStyle.Bold;
                 w.scoreBadge.color = ORANGE;
-                w.scoreText.text = FormatScore(entry.score);
+                w.scoreText.text = byCoins ? "$" + entry.coins : FormatScore(entry.score);
             }
             else
             {
