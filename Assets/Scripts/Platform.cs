@@ -24,6 +24,14 @@ public class Platform : MonoBehaviour
     [Tooltip("Final upward velocity given to the player when the rise ends.")]
     public float riseEndKick = 8f;
 
+    [Header("Moving (drifts left/right on a sine wave)")]
+    [Tooltip("If true, the platform slides horizontally so it's harder to land on.")]
+    public bool isMovingPlatform = false;
+    [Tooltip("Half-distance of the drift (world units). 2.5 = ±2.5 units around spawn point.")]
+    public float moveAmplitude = 2.5f;
+    [Tooltip("Drift cycles per second. Lower = slower, more predictable.")]
+    public float moveSpeedHz = 0.45f;
+
     public bool destroy;
     private Transform mainCamera;
     private static Laser_kill laserRef;
@@ -35,6 +43,11 @@ public class Platform : MonoBehaviour
     private bool isRising;
     private float riseRemaining;
     private Rigidbody2D ridingPlayerRb;
+
+    // Moving-platform state
+    private Vector3 moveBaseLocalPos;
+    private float movePhase;
+    private bool moveBaseCaptured;
 
     private void Awake()
     {
@@ -75,6 +88,23 @@ public class Platform : MonoBehaviour
         }
 
         if (isRising) UpdateRise();
+
+        if (isMovingPlatform) UpdateMove();
+    }
+
+    void UpdateMove()
+    {
+        if (!moveBaseCaptured)
+        {
+            moveBaseLocalPos = transform.position;
+            movePhase = Random.value * Mathf.PI * 2f;
+            moveBaseCaptured = true;
+        }
+        Vector3 p = transform.position;
+        float dx = Mathf.Sin(Time.time * moveSpeedHz * Mathf.PI * 2f + movePhase) * moveAmplitude;
+        p.x = moveBaseLocalPos.x + dx;
+        // Preserve any Y rise (so a platform can be both rising AND moving).
+        transform.position = p;
     }
 
     void UpdateRise()

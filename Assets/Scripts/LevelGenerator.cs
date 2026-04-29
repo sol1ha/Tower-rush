@@ -66,6 +66,8 @@ public class LevelGenerator : MonoBehaviour
     public int riserEach = 12;
     [Tooltip("Spawn a 'ghost' (barely-visible) platform every N platforms. 0 = never.")]
     public int ghostEach = 11;
+    [Tooltip("Spawn a horizontally-drifting platform every N platforms. 0 = never.")]
+    public int movingEach = 7;
     public Vector3 coinOffset;
     [Tooltip("Vertical offset (in world units) above the platform's center where each spike is placed.")]
     public float spikeYOffset = 1.2f;
@@ -73,6 +75,7 @@ public class LevelGenerator : MonoBehaviour
     [Range(0.3f, 1.0f)] public float spikeSpreadRatio = 0.7f;
     private int riserCounter = 0;
     private int ghostCounter = 0;
+    private int movingCounter = 0;
     private int boostCounter = 0;
     private int coinCounter = 5;
 
@@ -128,9 +131,15 @@ public class LevelGenerator : MonoBehaviour
                 coinCounter++;
                 riserCounter++;
                 ghostCounter++;
+                movingCounter++;
                 if (riserPrefab != null && riserEach > 0 && riserCounter % riserEach == 0)
                 {
                     SpawnRiser(spawnPosition);
+                    lastSimplePos = spawnPosition;
+                }
+                else if (movingEach > 0 && movingCounter % movingEach == 0)
+                {
+                    SpawnMovingFromBase(spawnPosition);
                     lastSimplePos = spawnPosition;
                 }
                 else if (ghostEach > 0 && ghostCounter % ghostEach == 0)
@@ -192,9 +201,14 @@ public class LevelGenerator : MonoBehaviour
                 coinCounter++;
                 riserCounter++;
                 ghostCounter++;
+                movingCounter++;
                 if (riserPrefab != null && riserEach > 0 && riserCounter % riserEach == 0)
                 {
                     SpawnRiser(spawnPosition);
+                }
+                else if (movingEach > 0 && movingCounter % movingEach == 0)
+                {
+                    SpawnMovingFromBase(spawnPosition);
                 }
                 else if (ghostEach > 0 && ghostCounter % ghostEach == 0)
                 {
@@ -252,6 +266,17 @@ public class LevelGenerator : MonoBehaviour
         GameObject p = Instantiate(platformPrefab, pos, Quaternion.identity, transform);
         platformCount++;
         p.AddComponent<GhostPlatformVisual>();
+    }
+
+    // Spawns a moving platform — regular prefab, full collision, but Platform's
+    // isMovingPlatform flag is set so it drifts horizontally on a sine wave.
+    // Random phase per platform so neighbouring movers don't sync visibly.
+    void SpawnMovingFromBase(Vector3 pos)
+    {
+        GameObject p = Instantiate(platformPrefab, pos, Quaternion.identity, transform);
+        platformCount++;
+        var plat = p.GetComponent<Platform>();
+        if (plat != null) plat.isMovingPlatform = true;
     }
 
     // Spawns the special "riser" platform — uses its own prefab (drag your
