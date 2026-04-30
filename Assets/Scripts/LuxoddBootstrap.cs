@@ -32,6 +32,8 @@ public class LuxoddBootstrap : MonoBehaviour
     [Header("Behavior")]
     [Tooltip("If true, attempts to connect to the WebSocket server on Start.")]
     public bool autoConnect = true;
+    [Tooltip("Also attempt to connect when running inside the Unity Editor. The plugin really only works in WebGL builds where the dev token is passed in the URL, so leave this OFF to silence 'WebSocket Closed' spam during in-editor playtesting.")]
+    public bool connectInEditor = false;
     [Tooltip("Activate the periodic health-check ping after a successful connect.")]
     public bool autoActivateHealthCheck = true;
     [Tooltip("How often (seconds) to refresh the leaderboard data while running.")]
@@ -74,7 +76,15 @@ public class LuxoddBootstrap : MonoBehaviour
 
     void Start()
     {
-        if (autoConnect) Connect();
+        if (!autoConnect) return;
+#if UNITY_EDITOR
+        if (!connectInEditor)
+        {
+            Debug.Log("[Luxodd] In-editor connect skipped (connectInEditor is OFF). Build to WebGL and append '?token=<dev_token>' to the URL to test the real plugin.");
+            return;
+        }
+#endif
+        Connect();
     }
 
     void Update()
