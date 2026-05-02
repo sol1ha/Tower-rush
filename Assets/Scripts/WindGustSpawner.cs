@@ -128,7 +128,9 @@ public class WindGustSpawner : MonoBehaviour
         bannerText.horizontalOverflow = HorizontalWrapMode.Overflow;
         bannerText.verticalOverflow = VerticalWrapMode.Overflow;
         bannerText.raycastTarget = false;
-        bannerText.text = windBlowsRight ? "WIND GUST   →→→" : "←←←   WIND GUST";
+        // Single-phase banner: WIND GUST + arrow (no separate "warning" then
+        // "active" phase — one banner shown for the whole event).
+        bannerText.text = windBlowsRight ? "WIND GUST  →" : "←  WIND GUST";
 
         var bannerOutline = bannerGo.AddComponent<Outline>();
         bannerOutline.effectColor = new Color(0f, 0f, 0f, 1f);
@@ -153,8 +155,7 @@ public class WindGustSpawner : MonoBehaviour
         }
         bannerRt.localScale = Vector3.one;
 
-        // Update banner copy for the active phase, slightly different look.
-        bannerText.text = windBlowsRight ? ">>>>   WIND   >>>>" : "<<<<   WIND   <<<<";
+        // (Single-phase banner — text stays the same for the whole event.)
 
         // ---- spawn streaks that scroll across the screen during the gust ----
         var streakHolder = new GameObject("WindStreaks");
