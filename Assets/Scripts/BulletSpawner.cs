@@ -105,12 +105,24 @@ public class BulletSpawner : MonoBehaviour
 
         if (!waveQueued && Time.time >= nextWaveTime - warningDuration)
         {
+            // Don't queue a wave while a wind gust is active or showing its
+            // warning banner — the two events at once is overwhelming.
+            // Push the wave back a couple of seconds and re-check next frame.
+            if (Mathf.Abs(WindGustSpawner.CurrentForce) > 0.01f)
+            {
+                nextWaveTime = Time.time + 2f + warningDuration;
+                return;
+            }
+
             waveQueued = true;
             nextWaveFromLeft = PickSide();
             if (warning != null) warning.Show(warningDuration, nextWaveFromLeft);
             StartCoroutine(FireWaveAfter(warningDuration));
         }
     }
+
+    /// <summary>True if a wave is already queued or actively firing.</summary>
+    public bool IsWaveQueuedOrFiring() => waveQueued;
 
     bool PickSide()
     {

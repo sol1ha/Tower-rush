@@ -734,11 +734,5 @@ public class LeaderboardUI : MonoBehaviour
         if (entranceCoroutine != null) StopCoroutine(entranceCoroutine);
         if (pulseCoroutine != null) StopCoroutine(pulseCoroutine);
         if (root != null) root.SetActive(false);
-
-        // Once the local leaderboard is dismissed, hand off to Luxodd's
-        // in-game transaction popup (Continue / Restart). The controller
-        // pauses gameplay and routes through the system overlay.
-        if (InGameTransactionController.Instance != null)
-            InGameTransactionController.Instance.OnGameOver(allowContinue: true, allowRestart: true);
     }
 }

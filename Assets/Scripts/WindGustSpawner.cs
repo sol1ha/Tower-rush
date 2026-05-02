@@ -20,9 +20,11 @@ public class WindGustSpawner : MonoBehaviour
 
     [Header("Timing")]
     [Tooltip("Seconds between gusts at activateAtHeight.")]
-    public float intervalAtMinHeight = 14f;
+    public float intervalAtMinHeight = 22f;
     [Tooltip("Seconds between gusts at fullDifficultyHeight.")]
-    public float intervalAtMaxHeight = 5f;
+    public float intervalAtMaxHeight = 12f;
+    [Tooltip("Minimum quiet time after the previous gust ends before another can fire.")]
+    public float minGapAfterGust = 10f;
     [Tooltip("Warning banner duration before the gust takes effect.")]
     public float warningDuration = 1.5f;
     [Tooltip("How long the gust pushes the player.")]
@@ -75,9 +77,19 @@ public class WindGustSpawner : MonoBehaviour
         if (player.position.y < activateAtHeight) return;
         if (Time.time < nextGustTime) return;
 
+        // Don't start a gust while bullets are about to fire — both at once is
+        // overwhelming. Wait a bit and re-check next frame.
+        var spawner = FindAnyObjectByType<BulletSpawner>();
+        if (spawner != null && spawner.IsWaveQueuedOrFiring())
+        {
+            nextGustTime = Time.time + 1f;
+            return;
+        }
+
         float t = Mathf.InverseLerp(activateAtHeight, fullDifficultyHeight, player.position.y);
         float interval = Mathf.Lerp(intervalAtMinHeight, intervalAtMaxHeight, t);
-        nextGustTime = Time.time + interval + warningDuration + gustDuration;
+        // Add minGapAfterGust so each cycle has a clearly-quiet phase.
+        nextGustTime = Time.time + interval + warningDuration + gustDuration + minGapAfterGust;
 
         bool fromLeft = Random.value < 0.5f;
         StartCoroutine(RunGust(fromLeft));
@@ -88,28 +100,43 @@ public class WindGustSpawner : MonoBehaviour
         Canvas canvas = FindAnyObjectByType<Canvas>();
         if (canvas == null) yield break;
 
-        // ---- warning banner: "WIND GUST →" at top of canvas ----
+        // ---- warning banner: huge, centred on screen so it's unmissable ----
         var bannerGo = new GameObject("WindBanner", typeof(RectTransform));
         bannerGo.transform.SetParent(canvas.transform, false);
         var bannerRt = (RectTransform)bannerGo.transform;
-        bannerRt.anchorMin = bannerRt.anchorMax = new Vector2(0.5f, 1f);
-        bannerRt.pivot = new Vector2(0.5f, 1f);
-        bannerRt.sizeDelta = new Vector2(680, 110);
-        bannerRt.anchoredPosition = new Vector2(0, -100);
+        bannerRt.anchorMin = bannerRt.anchorMax = new Vector2(0.5f, 0.5f);
+        bannerRt.pivot = new Vector2(0.5f, 0.5f);
+        bannerRt.sizeDelta = new Vector2(1100, 180);
+        bannerRt.anchoredPosition = new Vector2(0, 100);
+
+        // Solid backing panel so the text isn't lost against the desert sky.
+        var bannerBg = new GameObject("Bg", typeof(RectTransform));
+        bannerBg.transform.SetParent(bannerGo.transform, false);
+        var bgRt = (RectTransform)bannerBg.transform;
+        bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
+        bgRt.offsetMin = bgRt.offsetMax = Vector2.zero;
+        var bgImg = bannerBg.AddComponent<Image>();
+        bgImg.color = new Color(0f, 0f, 0f, 0.78f);
+        bgImg.raycastTarget = false;
 
         var bannerText = bannerGo.AddComponent<Text>();
         bannerText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        bannerText.fontSize = 56;
+        bannerText.fontSize = 96;
         bannerText.fontStyle = FontStyle.Bold;
         bannerText.alignment = TextAnchor.MiddleCenter;
         bannerText.color = warningColor;
         bannerText.horizontalOverflow = HorizontalWrapMode.Overflow;
         bannerText.verticalOverflow = VerticalWrapMode.Overflow;
-        bannerText.text = windBlowsRight ? "WIND GUST   →" : "←   WIND GUST";
+        bannerText.raycastTarget = false;
+        bannerText.text = windBlowsRight ? "WIND GUST   →→→" : "←←←   WIND GUST";
 
         var bannerOutline = bannerGo.AddComponent<Outline>();
-        bannerOutline.effectColor = new Color(0f, 0f, 0f, 0.95f);
-        bannerOutline.effectDistance = new Vector2(2.5f, -2.5f);
+        bannerOutline.effectColor = new Color(0f, 0f, 0f, 1f);
+        bannerOutline.effectDistance = new Vector2(4f, -4f);
+
+        var bannerShadow = bannerGo.AddComponent<Shadow>();
+        bannerShadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+        bannerShadow.effectDistance = new Vector2(6f, -6f);
 
         float wt = 0f;
         Vector2 baseAnchor = bannerRt.anchoredPosition;
