@@ -109,53 +109,71 @@ public class WindGustSpawner : MonoBehaviour
         bannerRt.sizeDelta = new Vector2(1100, 180);
         bannerRt.anchoredPosition = new Vector2(0, 100);
 
-        // Solid backing panel so the text isn't lost against the desert sky.
-        var bannerBg = new GameObject("Bg", typeof(RectTransform));
-        bannerBg.transform.SetParent(bannerGo.transform, false);
-        var bgRt = (RectTransform)bannerBg.transform;
-        bgRt.anchorMin = Vector2.zero; bgRt.anchorMax = Vector2.one;
-        bgRt.offsetMin = bgRt.offsetMax = Vector2.zero;
-        var bgImg = bannerBg.AddComponent<Image>();
-        bgImg.color = new Color(0f, 0f, 0f, 0.78f);
-        bgImg.raycastTarget = false;
-
+        // No background panel — bare animated text. Outline + drop-shadow keep
+        // it readable against the busy desert sky.
         var bannerText = bannerGo.AddComponent<Text>();
         bannerText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        bannerText.fontSize = 96;
+        bannerText.fontSize = 110;
         bannerText.fontStyle = FontStyle.Bold;
         bannerText.alignment = TextAnchor.MiddleCenter;
         bannerText.color = warningColor;
         bannerText.horizontalOverflow = HorizontalWrapMode.Overflow;
         bannerText.verticalOverflow = VerticalWrapMode.Overflow;
         bannerText.raycastTarget = false;
-        // Single-phase banner: WIND GUST + arrow (no separate "warning" then
-        // "active" phase — one banner shown for the whole event).
         bannerText.text = windBlowsRight ? "WIND GUST  →" : "←  WIND GUST";
 
         var bannerOutline = bannerGo.AddComponent<Outline>();
-        bannerOutline.effectColor = new Color(0f, 0f, 0f, 1f);
-        bannerOutline.effectDistance = new Vector2(4f, -4f);
+        bannerOutline.effectColor = new Color(0.10f, 0.05f, 0.02f, 1f);
+        bannerOutline.effectDistance = new Vector2(3f, -3f);
 
         var bannerShadow = bannerGo.AddComponent<Shadow>();
-        bannerShadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
-        bannerShadow.effectDistance = new Vector2(6f, -6f);
+        bannerShadow.effectColor = new Color(0f, 0f, 0f, 0.7f);
+        bannerShadow.effectDistance = new Vector2(5f, -5f);
 
-        float wt = 0f;
         Vector2 baseAnchor = bannerRt.anchoredPosition;
-        while (wt < warningDuration)
+        // Slide-in: text comes flying in FROM the wind direction (so a
+        // rightward wind gust slides in from the left, blowing toward right).
+        float slideInFrom = windBlowsRight ? -900f : 900f;
+        float slideInDuration = Mathf.Min(0.35f, warningDuration * 0.30f);
+
+        // Phase 1 — slide in with overshoot + scale-up.
+        float st = 0f;
+        while (st < slideInDuration)
         {
-            wt += Time.deltaTime;
-            // Pulse + small shake.
-            float pulse = 0.5f + Mathf.Sin(wt * 12f) * 0.5f;
-            float scale = Mathf.Lerp(0.95f, 1.10f, pulse);
+            st += Time.deltaTime;
+            float u = Mathf.Clamp01(st / slideInDuration);
+            float eased = EaseOutBack(u);
+            float x = Mathf.LerpUnclamped(slideInFrom, 0f, eased);
+            float scale = Mathf.LerpUnclamped(0.4f, 1f, eased);
+            bannerRt.anchoredPosition = baseAnchor + new Vector2(x, 0f);
             bannerRt.localScale = new Vector3(scale, scale, 1f);
-            float jx = (Mathf.PerlinNoise(Time.time * 30f, 0) - 0.5f) * 2f * 6f;
-            bannerRt.anchoredPosition = baseAnchor + new Vector2(jx, 0f);
             yield return null;
         }
-        bannerRt.localScale = Vector3.one;
 
-        // (Single-phase banner — text stays the same for the whole event.)
+        // Phase 2 — hold + animate during the rest of the warning window.
+        float holdDuration = Mathf.Max(0f, warningDuration - slideInDuration);
+        float wt = 0f;
+        while (wt < holdDuration)
+        {
+            wt += Time.deltaTime;
+            // Scale pulse.
+            float pulse = 0.5f + Mathf.Sin(wt * 12f) * 0.5f;
+            float scale = Mathf.Lerp(0.95f, 1.12f, pulse);
+            // Subtle rotation wobble (±3 degrees).
+            float angle = Mathf.Sin(wt * 6f) * 3f;
+            bannerRt.localScale = new Vector3(scale, scale, 1f);
+            bannerRt.localRotation = Quaternion.Euler(0f, 0f, angle);
+            // Small horizontal jitter.
+            float jx = (Mathf.PerlinNoise(Time.time * 30f, 0f) - 0.5f) * 2f * 4f;
+            bannerRt.anchoredPosition = baseAnchor + new Vector2(jx, 0f);
+            // Color shimmer between warningColor and a warm orange so the text
+            // doesn't sit at a single flat hue.
+            Color shimmer = Color.Lerp(warningColor, new Color(1f, 0.55f, 0.05f), pulse * 0.6f);
+            bannerText.color = shimmer;
+            yield return null;
+        }
+        bannerRt.localRotation = Quaternion.identity;
+        bannerRt.localScale = Vector3.one;
 
         // ---- spawn streaks that scroll across the screen during the gust ----
         var streakHolder = new GameObject("WindStreaks");
@@ -276,5 +294,14 @@ public class WindGustSpawner : MonoBehaviour
         }
         tex.SetPixels(px); tex.Apply();
         return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    static float EaseOutBack(float t)
+    {
+        t = Mathf.Clamp01(t);
+        const float c1 = 1.70158f;
+        const float c3 = c1 + 1f;
+        float k = t - 1f;
+        return 1f + c3 * k * k * k + c1 * k * k;
     }
 }
