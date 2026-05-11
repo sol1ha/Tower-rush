@@ -1,45 +1,12 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
-/// Reloads the scene after a brief delay on <see cref="PlayerKillLimit.PlayerKill"/> event
+/// Kept as a stub so the existing scene reference doesn't break — the death
+/// retry / press-any-key-to-reload flow has been intentionally removed, so
+/// once the player dies the run is over and there's no way to restart from
+/// inside the play session.
 /// </summary>
 public class ReloadScene : MonoBehaviour
 {
-    public static bool CanReloadAfterDeath = true;
-    private bool firecd;
-    private float cd;
-
-    void Start()
-    {
-        firecd = false;
-        CanReloadAfterDeath = true;
-        PlayerKillLimit.PlayerKill += PlayerKillLimit_PlayerKill;
-    }
-    private void PlayerKillLimit_PlayerKill(object sender, System.EventArgs e)
-    {
-#if LUXODD_SDK
-        if (InGameTransactionController.Instance != null)
-        {
-            InGameTransactionController.Instance.OnGameOver(allowContinue: true, allowRestart: true);
-            firecd = false;
-            return;
-        }
-#endif
-        cd = Time.time + 1f;
-        firecd = true;
-    }
-    void Update()
-    {
-        if (firecd && CanReloadAfterDeath && Time.time > cd && (Keyboard.current != null && Keyboard.current.anyKey.isPressed || Mouse.current != null && Mouse.current.leftButton.isPressed))
-        {
-            if (LeaderboardUI.Instance != null)
-                LeaderboardUI.Instance.Hide();
-
-            HighScoreSet.FinalizeSessionCoins();
-            UnityEngine.SceneManagement.SceneManager.LoadScene(0);
-        }
-    }
+    public static bool CanReloadAfterDeath = false;
 }

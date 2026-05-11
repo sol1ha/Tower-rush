@@ -71,11 +71,11 @@ public class LevelGenerator : MonoBehaviour
 
     [Header("Height-based difficulty")]
     [Tooltip("Player height where the bullet spawner switches to HARD mode (level 1).")]
-    public float bulletHardHeight = 40f;
+    public float bulletHardHeight = 18f;
     [Tooltip("Player height where bullet spawner switches to EXTREME mode (level 2).")]
-    public float bulletExtremeHeight = 120f;
+    public float bulletExtremeHeight = 65f;
     [Tooltip("Player height where bullet spawner switches to NIGHTMARE mode (level 3).")]
-    public float bulletNightmareHeight = 250f;
+    public float bulletNightmareHeight = 140f;
     [Tooltip("Above this height, every row may also get a side platform — denser layout but with full collider spacing kept. Set chance to 0 to disable.")]
     public float densePlatformsHeight = 80f;
     [Tooltip("Chance per row to spawn an extra side platform once densePlatformsHeight is crossed. 0 = never (default off so platforms don't crowd each other).")]

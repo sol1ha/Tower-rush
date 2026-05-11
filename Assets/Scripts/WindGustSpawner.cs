@@ -14,23 +14,23 @@ public class WindGustSpawner : MonoBehaviour
 {
     [Header("Activation")]
     [Tooltip("Player Y where wind gusts start. Below this, never spawns.")]
-    public float activateAtHeight = 25f;
+    public float activateAtHeight = 12f;
     [Tooltip("Player Y where the gust frequency maxes out.")]
-    public float fullDifficultyHeight = 220f;
+    public float fullDifficultyHeight = 160f;
 
     [Header("Timing")]
     [Tooltip("Seconds between gusts at activateAtHeight.")]
-    public float intervalAtMinHeight = 14f;
+    public float intervalAtMinHeight = 9f;
     [Tooltip("Seconds between gusts at fullDifficultyHeight.")]
-    public float intervalAtMaxHeight = 5f;
+    public float intervalAtMaxHeight = 3.5f;
     [Tooltip("Warning banner duration before the gust takes effect.")]
-    public float warningDuration = 1.5f;
+    public float warningDuration = 1.2f;
     [Tooltip("How long the gust pushes the player.")]
-    public float gustDuration = 2.5f;
+    public float gustDuration = 2.8f;
 
     [Header("Force")]
     [Tooltip("Horizontal speed the wind drags the player at, in world units/sec. Direction matches the banner arrow.")]
-    public float gustForce = 9f;
+    public float gustForce = 11f;
 
     [Header("Look")]
     public Color warningColor = new Color(1.00f, 0.85f, 0.20f, 1f);

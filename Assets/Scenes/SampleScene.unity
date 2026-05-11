@@ -202,12 +202,12 @@ MonoBehaviour:
   minNoOverlapX: 5
   overlapYWindow: 4.5
   overlapMemory: 12
-  spikeStartPlatform: 8
-  spikeChance: 0.25
-  spikeDifficultyScale: 0.05
-  maxSpikeChance: 0.6
+  spikeStartPlatform: 5
+  spikeChance: 0.38
+  spikeDifficultyScale: 0.09
+  maxSpikeChance: 0.75
   doubleJumpGapThreshold: 4
-  safePlatformsBetweenSpikes: 2
+  safePlatformsBetweenSpikes: 1
   boostEach: 8
   coinEach: 10
   coinOffset: {x: 0, y: 1, z: 0}
@@ -6860,7 +6860,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &638227441
 RectTransform:
   m_ObjectHideFlags: 0
@@ -7406,10 +7406,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BulletSpawner
   bulletPrefab: {fileID: -7877884364681378771, guid: da9fc96d102124c7e883e90563411299,
     type: 3}
-  minInterval: 60
-  maxInterval: 60
-  warningDuration: 5
-  initialDelay: 60
+  minInterval: 22
+  maxInterval: 32
+  warningDuration: 3
+  initialDelay: 20
   spawnLeft: 1
   spawnRight: 1
   spawnEdgeMargin: 1
